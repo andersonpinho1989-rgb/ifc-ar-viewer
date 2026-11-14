@@ -143,13 +143,30 @@
     background: var(--concreto); color: var(--tinta); cursor: pointer; flex: none; }
   .panel .body { overflow: auto; padding: 4px 16px 18px; font-size: 15px; -webkit-overflow-scrolling: touch; }
   #catPanel { left: calc(16px + var(--safe-l)); top: calc(76px + var(--safe-t)); width: 320px; max-height: calc(100vh - 220px); }
-  #propPanel { right: calc(16px + var(--safe-r)); top: calc(76px + var(--safe-t)); width: 380px; max-height: calc(100vh - 220px); }
+  /* Tela dividida: informações no quarto de baixo, desenho nos três quartos de cima */
+  :root { --info-h: max(25vh, 170px); }
+  #propPanel { left: 0; right: 0; bottom: 0; top: auto; width: auto; height: var(--info-h); border-radius: 16px 16px 0 0;
+    padding-bottom: var(--safe-b); box-shadow: 0 -8px 24px rgba(0,0,0,.3); }
+  #propPanel header { padding: 10px 16px 8px; align-items: center; }
+  #propPanel h3 { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+  #propPanel .sub { font-size: 13px; margin-top: 0; }
+  #propPanel .x { width: 32px; height: 32px; }
+  #propPanel .body { padding-top: 0; }
+  #propPanel .pset { margin-top: 10px; }
+  #propPanel .pset:first-child h4 { display: none; }
+  @media (min-width: 860px) {
+    #propBody { columns: 3 300px; column-gap: 28px; }
+    #propPanel .pset { break-inside: avoid; }
+  }
+  body.split #app { bottom: var(--info-h); }
+  body.split #dock, body.split #status, body.split #retryBtn { display: none; }
+  body.split #catPanel { display: none; }
   #installSheet { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(380px, calc(100vw - 32px)); }
   @media (max-width: 859px) {
-    #catPanel, #propPanel { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-height: 62vh;
+    #catPanel { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-height: 62vh;
       border-radius: 18px 18px 0 0; padding-bottom: var(--safe-b); }
-    #catPanel header, #propPanel header { padding-top: 22px; position: relative; }
-    #catPanel header::before, #propPanel header::before { content: ''; position: absolute; top: 8px; left: 50%;
+    #catPanel header { padding-top: 22px; position: relative; }
+    #catPanel header::before { content: ''; position: absolute; top: 8px; left: 50%;
       width: 40px; height: 4px; margin-left: -20px; border-radius: 2px; background: var(--concreto-2); }
   }
 
@@ -408,7 +425,8 @@ renderer.domElement.addEventListener('pointerdown', (e) => (downPos = [e.clientX
 renderer.domElement.addEventListener('pointerup', (e) => {
   if (!model || !downPos || renderer.xr.isPresenting) return;
   if (Math.hypot(e.clientX - downPos[0], e.clientY - downPos[1]) > 5) return; // foi arraste da câmera
-  pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
   raycaster.setFromCamera(pointer, camera);
   const pickable = model.children.filter((m) => m.isMesh && m.visible && !m.userData.isHighlight);
   const hit = raycaster.intersectObjects(pickable, false)[0];
@@ -434,8 +452,9 @@ const elementRanges = new Map(); // expressID → [{mesh, start, count}]
 const storeyOf = new Map();      // expressID → nome do pavimento
 let highlight = [];
 let selectedId = null;
-const hlMat = new THREE.MeshBasicMaterial({ color: 0xffc61a, transparent: true, opacity: 0.6,
+const hlMat = new THREE.MeshLambertMaterial({ color: 0x1e90ff, emissive: 0x0a3d8f, transparent: true, opacity: 0.92,
   depthTest: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, side: THREE.DoubleSide });
+const hlEdgeMat = new THREE.LineBasicMaterial({ color: 0x062a63 });
 
 function elementAtFace(mesh, faceIndex) {
   const ranges = mesh.userData.ranges; // ordenado por start
@@ -454,6 +473,7 @@ function clearSelection() {
   for (const h of highlight) { model.remove(h); h.geometry.dispose(); }
   highlight = []; selectedId = null;
   $('propPanel').classList.remove('open');
+  document.body.classList.remove('split');
 }
 
 function selectElement(id) {
@@ -468,8 +488,41 @@ function selectElement(id) {
     h.renderOrder = 10;
     model.add(h);
     highlight.push(h);
+    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(g, 25), hlEdgeMat);
+    edges.userData.isHighlight = true;
+    edges.renderOrder = 11;
+    model.add(edges);
+    highlight.push(edges);
   }
+  document.body.classList.add('split');
+  focusOn(id);
   showProperties(id);
+}
+
+// Centraliza o elemento selecionado na área do desenho, sem mudar o zoom
+const focusAnim = { active: false };
+function focusOn(id) {
+  const box = new THREE.Box3(), p = new THREE.Vector3();
+  for (const { mesh, start, count } of elementRanges.get(id) || []) {
+    const pos = mesh.geometry.attributes.position, idx = mesh.geometry.index.array;
+    for (let k = start; k < start + count; k++) box.expandByPoint(p.fromBufferAttribute(pos, idx[k]));
+  }
+  if (box.isEmpty()) return;
+  model.updateMatrixWorld(true);
+  box.applyMatrix4(model.matrixWorld);
+  const to = box.getCenter(new THREE.Vector3());
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  Object.assign(focusAnim, { active: true, t0: performance.now(), dur: reduce ? 0 : 400,
+    fromT: controls.target.clone(), fromC: camera.position.clone(), to });
+}
+function stepFocus() {
+  if (!focusAnim.active) return;
+  const k = focusAnim.dur ? Math.min(1, (performance.now() - focusAnim.t0) / focusAnim.dur) : 1;
+  const e = 1 - Math.pow(1 - k, 3);
+  const d = focusAnim.to.clone().sub(focusAnim.fromT).multiplyScalar(e);
+  controls.target.copy(focusAnim.fromT).add(d);
+  camera.position.copy(focusAnim.fromC).add(d);
+  if (k >= 1) focusAnim.active = false;
 }
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -963,16 +1016,22 @@ renderer.setAnimationLoop((time, frame) => {
       updatePreview();
     }
   } else {
+    stepFocus();
     controls.update();
   }
   renderer.render(scene, camera);
 });
 
-addEventListener('resize', () => {
-  camera.aspect = innerWidth / innerHeight;
+// O desenho ocupa a área do #app (a tela inteira, ou os 3/4 de cima com as informações abertas)
+function fitViewport() {
+  if (renderer.xr.isPresenting) return;
+  const el = $('app'), w = el.clientWidth || innerWidth, h = el.clientHeight || innerHeight;
+  camera.aspect = w / h;
   camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-});
+  renderer.setSize(w, h);
+}
+if ('ResizeObserver' in window) new ResizeObserver(fitViewport).observe($('app'));
+addEventListener('resize', fitViewport);
 </script>
 
 <script>
