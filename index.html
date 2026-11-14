@@ -752,16 +752,34 @@ const applyScale = () => pivot.scale.setScalar(baseScale() * userScale);
 const overlay = $('arOverlay');
 let xrSession = null;
 
+let startingAR = false;
 $('arBtn').onclick = async () => {
-  if (!model) return;
+  if (!model || startingAR) return;
+  startingAR = true;
+  setStatus('Abrindo o AR…');
   try {
-    xrSession = await navigator.xr.requestSession('immersive-ar', {
-      optionalFeatures: ['hit-test', 'dom-overlay', 'local-floor'],
-      domOverlay: { root: overlay },
-    });
-  } catch (e) { setStatus('Não foi possível abrir o AR: ' + e.message); return; }
-  renderer.xr.setReferenceSpaceType('local');
-  await renderer.xr.setSession(xrSession);
+    // Encerra uma sessão anterior que tenha ficado aberta (ex.: saída pelo gesto de voltar)
+    const old = renderer.xr.getSession() || xrSession;
+    if (old) { try { await old.end(); } catch {} xrSession = null; await new Promise((r) => setTimeout(r, 300)); }
+    try {
+      xrSession = await navigator.xr.requestSession('immersive-ar', {
+        optionalFeatures: ['hit-test', 'dom-overlay', 'local-floor'],
+        domOverlay: { root: overlay },
+      });
+    } catch (e) {
+      // Segunda tentativa, sem a sobreposição de botões
+      xrSession = await navigator.xr.requestSession('immersive-ar', { optionalFeatures: ['hit-test', 'local-floor'] });
+    }
+    xrSession.addEventListener('end', () => { xrSession = null; });
+    renderer.xr.setReferenceSpaceType('local');
+    await renderer.xr.setSession(xrSession);
+    setStatus('');
+  } catch (e) {
+    xrSession = null;
+    setStatus('Não foi possível abrir o AR: ' + (e.name ? e.name + ', ' : '') + e.message);
+  } finally {
+    startingAR = false;
+  }
 };
 
 renderer.xr.addEventListener('sessionstart', () => {
