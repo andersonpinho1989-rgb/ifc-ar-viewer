@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>IFC em Realidade Aumentada</title>
+<style>
+  :root { --bg:#0f1216; --panel:rgba(20,24,30,.88); --fg:#e8ecf1; --muted:#9aa4b2; --accent:#3d8bfd; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; overflow:hidden; }
+  #app { position:fixed; inset:0; }
+  canvas { display:block; }
+
+  #topbar { position:fixed; top:0; left:0; right:0; padding:12px 14px; display:flex; gap:10px;
+    align-items:center; flex-wrap:wrap; background:linear-gradient(var(--panel),transparent); z-index:10; }
+  #topbar h1 { font-size:15px; margin:0 8px 0 0; font-weight:600; }
+  .btn { background:#252b34; color:var(--fg); border:1px solid #343c48; border-radius:10px;
+    padding:9px 13px; font-size:14px; cursor:pointer; user-select:none; }
+  .btn:hover { border-color:var(--accent); }
+  .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .btn:disabled { opacity:.45; cursor:default; }
+  select.btn { appearance:none; }
+  #file { display:none; }
+
+  #drop { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:5; pointer-events:none; }
+  #drop .card { pointer-events:auto; text-align:center; padding:28px 30px; border:2px dashed #3a4350;
+    border-radius:16px; background:var(--panel); max-width:420px; margin:0 20px; }
+  #drop.hover .card { border-color:var(--accent); }
+  #drop p { color:var(--muted); font-size:14px; line-height:1.5; }
+
+  #status { position:fixed; bottom:14px; left:14px; right:14px; text-align:center; font-size:13px;
+    color:var(--muted); z-index:10; pointer-events:none; }
+
+  /* Overlay exibido durante a sessão AR (WebXR dom-overlay) */
+  #arOverlay { display:none; position:fixed; inset:0; pointer-events:none; }
+  #arOverlay.on { display:block; }
+  #arHint { position:absolute; top:18px; left:50%; transform:translateX(-50%); background:var(--panel);
+    padding:8px 14px; border-radius:20px; font-size:14px; }
+  #arControls { position:absolute; bottom:24px; left:0; right:0; display:flex; justify-content:center;
+    gap:8px; flex-wrap:wrap; pointer-events:auto; padding:0 10px; }
+  #arExit { position:absolute; top:14px; right:14px; pointer-events:auto; }
+</style>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+    "web-ifc": "https://cdn.jsdelivr.net/npm/web-ifc@0.0.66/+esm"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="topbar">
+  <h1>IFC · Realidade Aumentada</h1>
+  <button class="btn" id="openBtn">📂 Abrir IFC</button>
+  <input type="file" id="file" accept=".ifc" />
+  <select class="btn" id="scaleSel" title="Escala do modelo no AR">
+    <option value="1">Escala 1:1 (real)</option>
+    <option value="0.1">1:10</option>
+    <option value="0.02">1:50</option>
+    <option value="0.01" selected>1:100 (maquete)</option>
+    <option value="0.005">1:200</option>
+    <option value="0.002">1:500</option>
+  </select>
+  <button class="btn" id="anchorBtn" disabled title="Clique num ponto do modelo para usá-lo como âncora">📌 Definir ancoragem</button>
+  <button class="btn" id="anchorReset" disabled title="Voltar a âncora para o centro da base">↺ Âncora padrão</button>
+  <button class="btn primary" id="arBtn" disabled>🕶️ Ver em AR</button>
+  <button class="btn" id="iosBtn" style="display:none" disabled>🍎 AR no iPhone</button>
+</div>
+
+<div id="drop">
+  <div class="card">
+    <h2 style="margin-top:0">Abra um arquivo .ifc</h2>
+    <p>Clique em <b>Abrir IFC</b> ou arraste o arquivo aqui.<br/>
+       O arquivo é processado localmente no seu navegador — nada é enviado para servidores.</p>
+    <button class="btn primary" id="openBtn2">Selecionar arquivo</button>
+  </div>
+</div>
+
+<div id="status">Carregando motor IFC…</div>
+
+<div id="arOverlay">
+  <div id="arHint">Aponte para o chão e toque para posicionar</div>
+  <button class="btn" id="arExit">✕ Sair</button>
+  <div id="arControls">
+    <button class="btn" data-act="rotL">⟲ Girar</button>
+    <button class="btn" data-act="rotR">⟳ Girar</button>
+    <button class="btn" data-act="smaller">－ Menor</button>
+    <button class="btn" data-act="bigger">＋ Maior</button>
+    <button class="btn" data-act="move">📍 Reposicionar</button>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { USDZExporter } from 'three/addons/exporters/USDZExporter.js';
+import * as WEBIFC from 'web-ifc';
+
+const $ = (id) => document.getElementById(id);
+const statusEl = $('status');
+const setStatus = (t) => (statusEl.textContent = t);
+
+/* ---------- Cena 3D ---------- */
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.xr.enabled = true;
+$('app').appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const bgColor = new THREE.Color(0x0f1216);
+scene.background = bgColor;
+
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.01, 5000);
+camera.position.set(20, 15, 20);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+sun.position.set(30, 50, 20);
+scene.add(sun);
+
+const grid = new THREE.GridHelper(100, 100, 0x334050, 0x1c232c);
+scene.add(grid);
+
+// anchor: posição no mundo (AR); pivot: rotação/escala; model: geometria IFC centralizada
+const anchor = new THREE.Group();
+const pivot = new THREE.Group();
+anchor.add(pivot);
+scene.add(anchor);
+let model = null;
+let modelSize = new THREE.Vector3(1, 1, 1);
+
+/* ---------- Ponto de ancoragem ---------- */
+// O ponto de ancoragem (em coordenadas do modelo) fica na origem do pivot.
+// No AR, a origem do pivot é colocada exatamente onde você toca no chão.
+const defaultAnchor = new THREE.Vector3();
+const anchorLocal = new THREE.Vector3();
+const anchorMarker = new THREE.Group();
+{
+  const mat = new THREE.MeshBasicMaterial({ color: 0xff3b30, depthTest: false });
+  const pin = new THREE.Mesh(new THREE.ConeGeometry(0.6, 2, 16).rotateX(Math.PI), mat);
+  pin.position.y = 1;
+  const dot = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 12), mat);
+  anchorMarker.add(pin, dot);
+  anchorMarker.renderOrder = 999;
+  anchorMarker.traverse((o) => (o.renderOrder = 999));
+}
+
+function setAnchor(p) {
+  anchorLocal.copy(p);
+  model.position.set(-p.x, -p.y, -p.z);
+  controls.target.set(0, modelSize.y / 2, 0);
+}
+
+let pickingAnchor = false;
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let downPos = null;
+
+$('anchorBtn').onclick = () => {
+  pickingAnchor = !pickingAnchor;
+  $('anchorBtn').classList.toggle('primary', pickingAnchor);
+  setStatus(pickingAnchor ? 'Clique no ponto do modelo que será a âncora (ex.: canto de um pilar, marco topográfico)…' : 'Seleção de âncora cancelada');
+};
+$('anchorReset').onclick = () => { if (model) { setAnchor(defaultAnchor); setStatus('Âncora: centro da base do modelo'); } };
+
+renderer.domElement.addEventListener('pointerdown', (e) => (downPos = [e.clientX, e.clientY]));
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!pickingAnchor || !model || !downPos || renderer.xr.isPresenting) return;
+  if (Math.hypot(e.clientX - downPos[0], e.clientY - downPos[1]) > 5) return; // foi arraste da câmera
+  pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObject(model, true)[0];
+  if (!hit) { setStatus('Nenhum elemento nesse ponto — tente de novo'); return; }
+  const local = model.worldToLocal(hit.point.clone()); // coordenadas no sistema do modelo
+  setAnchor(local);
+  pickingAnchor = false;
+  $('anchorBtn').classList.remove('primary');
+  setStatus(`Âncora definida em X ${local.x.toFixed(2)} · Y ${local.z.toFixed(2)} · Z ${local.y.toFixed(2)} m (relativo à origem do modelo)`);
+});
+
+/* ---------- Motor IFC ---------- */
+const ifcApi = new WEBIFC.IfcAPI();
+ifcApi.SetWasmPath('https://cdn.jsdelivr.net/npm/web-ifc@0.0.66/', true);
+let ifcReady = false;
+ifcApi.Init().then(() => { ifcReady = true; setStatus('Pronto. Abra um arquivo .ifc'); })
+  .catch((e) => setStatus('Erro ao iniciar o motor IFC: ' + e.message));
+
+async function loadIfc(file) {
+  if (!ifcReady) { setStatus('Aguarde o motor IFC carregar…'); return; }
+  setStatus(`Lendo ${file.name}…`);
+  $('drop').style.display = 'none';
+  await new Promise((r) => setTimeout(r, 30));
+
+  const data = new Uint8Array(await file.arrayBuffer());
+  const t0 = performance.now();
+  const modelID = ifcApi.OpenModel(data, { COORDINATE_TO_ORIGIN: true });
+
+  // Agrupa geometrias por cor → poucos meshes = desempenho bom no celular
+  const buckets = new Map();
+  const m4 = new THREE.Matrix4(), n3 = new THREE.Matrix3();
+  const v = new THREE.Vector3(), n = new THREE.Vector3();
+  let count = 0;
+
+  ifcApi.StreamAllMeshes(modelID, (mesh) => {
+    const geoms = mesh.geometries;
+    for (let i = 0; i < geoms.size(); i++) {
+      const pg = geoms.get(i);
+      const g = ifcApi.GetGeometry(modelID, pg.geometryExpressID);
+      const verts = ifcApi.GetVertexArray(g.GetVertexData(), g.GetVertexDataSize());
+      const idx = ifcApi.GetIndexArray(g.GetIndexData(), g.GetIndexDataSize());
+      g.delete();
+      if (!verts.length || !idx.length) continue;
+
+      const c = pg.color;
+      const key = `${c.x.toFixed(3)}_${c.y.toFixed(3)}_${c.z.toFixed(3)}_${c.w.toFixed(2)}`;
+      let b = buckets.get(key);
+      if (!b) { b = { color: c, pos: [], nor: [], idx: [], offset: 0 }; buckets.set(key, b); }
+
+      m4.fromArray(pg.flatTransformation);
+      n3.getNormalMatrix(m4);
+      for (let k = 0; k < verts.length; k += 6) {
+        v.set(verts[k], verts[k + 1], verts[k + 2]).applyMatrix4(m4);
+        n.set(verts[k + 3], verts[k + 4], verts[k + 5]).applyMatrix3(n3).normalize();
+        b.pos.push(v.x, v.y, v.z);
+        b.nor.push(n.x, n.y, n.z);
+      }
+      for (let k = 0; k < idx.length; k++) b.idx.push(idx[k] + b.offset);
+      b.offset += verts.length / 6;
+      count++;
+    }
+  });
+  ifcApi.CloseModel(modelID);
+
+  if (model) { pivot.remove(model); model.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); }); }
+  model = new THREE.Group();
+
+  for (const b of buckets.values()) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(b.pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(b.nor, 3));
+    geo.setIndex(b.idx);
+    const transparent = b.color.w < 0.99;
+    const mat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(b.color.x, b.color.y, b.color.z),
+      opacity: b.color.w, transparent, depthWrite: !transparent,
+      side: THREE.DoubleSide, roughness: 0.8, metalness: 0.0,
+    });
+    model.add(new THREE.Mesh(geo, mat));
+  }
+
+  // Âncora padrão: centro da base do modelo
+  const box = new THREE.Box3().setFromObject(model);
+  const center = box.getCenter(new THREE.Vector3());
+  box.getSize(modelSize);
+  defaultAnchor.set(center.x, box.min.y, center.z);
+  pivot.add(model);
+  setAnchor(defaultAnchor);
+  pivot.add(anchorMarker);
+
+  // Enquadra a câmera
+  const r = Math.max(modelSize.x, modelSize.y, modelSize.z);
+  anchorMarker.scale.setScalar(Math.max(0.05, r * 0.012));
+  $('anchorBtn').disabled = false;
+  $('anchorReset').disabled = false;
+  controls.target.set(0, modelSize.y / 2, 0);
+  camera.position.set(r * 1.1, r * 0.8, r * 1.1);
+  camera.far = r * 20; camera.updateProjectionMatrix();
+  grid.scale.setScalar(Math.max(1, r / 50));
+
+  $('arBtn').disabled = !arSupported;
+  $('iosBtn').disabled = false;
+  const secs = ((performance.now() - t0) / 1000).toFixed(1);
+  setStatus(`${file.name} — ${count} elementos · ${modelSize.x.toFixed(1)} × ${modelSize.z.toFixed(1)} × ${modelSize.y.toFixed(1)} m · ${secs}s` +
+    (arSupported ? '' : ' · AR WebXR indisponível neste navegador'));
+}
+
+/* ---------- Abrir arquivo ---------- */
+const fileInput = $('file');
+$('openBtn').onclick = $('openBtn2').onclick = () => fileInput.click();
+fileInput.onchange = () => fileInput.files[0] && loadIfc(fileInput.files[0]);
+const drop = $('drop');
+addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('hover'); });
+addEventListener('dragleave', () => drop.classList.remove('hover'));
+addEventListener('drop', (e) => {
+  e.preventDefault(); drop.classList.remove('hover');
+  const f = e.dataTransfer.files[0];
+  if (f) loadIfc(f);
+});
+
+/* ---------- Realidade Aumentada (WebXR – Android/Chrome) ---------- */
+let arSupported = false;
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+if (navigator.xr?.isSessionSupported) {
+  navigator.xr.isSessionSupported('immersive-ar').then((ok) => {
+    arSupported = ok;
+    if (!ok) $('arBtn').title = 'Seu navegador não suporta WebXR AR';
+  });
+}
+if (isIOS) { $('iosBtn').style.display = ''; $('arBtn').style.display = 'none'; }
+
+const reticle = new THREE.Mesh(
+  new THREE.RingGeometry(0.08, 0.11, 32).rotateX(-Math.PI / 2),
+  new THREE.MeshBasicMaterial({ color: 0x3d8bfd })
+);
+reticle.matrixAutoUpdate = false;
+reticle.visible = false;
+scene.add(reticle);
+
+let hitTestSource = null, hitTestRequested = false, placed = false;
+let userScale = 1;
+const baseScale = () => parseFloat($('scaleSel').value);
+const applyScale = () => pivot.scale.setScalar(baseScale() * userScale);
+
+const overlay = $('arOverlay');
+let xrSession = null;
+
+$('arBtn').onclick = async () => {
+  if (!model) return;
+  try {
+    xrSession = await navigator.xr.requestSession('immersive-ar', {
+      requiredFeatures: ['hit-test'],
+      optionalFeatures: ['dom-overlay', 'local-floor'],
+      domOverlay: { root: overlay },
+    });
+  } catch (e) { setStatus('Não foi possível iniciar o AR: ' + e.message); return; }
+  renderer.xr.setReferenceSpaceType('local');
+  await renderer.xr.setSession(xrSession);
+};
+
+renderer.xr.addEventListener('sessionstart', () => {
+  scene.background = null;
+  grid.visible = false;
+  overlay.classList.add('on');
+  placed = false; anchor.visible = false; userScale = 1; applyScale();
+  pivot.rotation.set(0, 0, 0);
+  $('arHint').textContent = 'Aponte para o chão e toque para posicionar';
+  const session = renderer.xr.getSession();
+  session.addEventListener('select', onSelect);
+});
+renderer.xr.addEventListener('sessionend', () => {
+  scene.background = bgColor;
+  grid.visible = true;
+  overlay.classList.remove('on');
+  hitTestSource = null; hitTestRequested = false; reticle.visible = false;
+  anchor.position.set(0, 0, 0); anchor.visible = true;
+  pivot.scale.setScalar(1); pivot.rotation.set(0, 0, 0);
+  xrSession = null;
+});
+
+function onSelect() {
+  if (!reticle.visible || placed) return;
+  anchor.position.setFromMatrixPosition(reticle.matrix);
+  anchor.visible = true; placed = true; reticle.visible = false;
+  $('arHint').textContent = 'Modelo posicionado · use os botões para ajustar';
+}
+
+// Botões do overlay: impedir que o toque também dispare "select" no AR
+overlay.addEventListener('beforexrselect', (e) => e.preventDefault());
+$('arExit').onclick = () => xrSession?.end();
+$('arControls').onclick = (e) => {
+  const act = e.target.dataset.act;
+  if (act === 'rotL') pivot.rotation.y += Math.PI / 12;
+  if (act === 'rotR') pivot.rotation.y -= Math.PI / 12;
+  if (act === 'bigger') { userScale *= 1.25; applyScale(); }
+  if (act === 'smaller') { userScale /= 1.25; applyScale(); }
+  if (act === 'move') { placed = false; anchor.visible = false; $('arHint').textContent = 'Toque no chão para reposicionar'; }
+};
+$('scaleSel').onchange = () => { if (renderer.xr.isPresenting) { userScale = 1; applyScale(); } };
+
+/* ---------- AR no iPhone/iPad (AR Quick Look via USDZ) ---------- */
+$('iosBtn').onclick = async () => {
+  if (!model) return;
+  setStatus('Gerando USDZ para AR Quick Look…');
+  const exportRoot = new THREE.Group();
+  const clone = model.clone();
+  const holder = new THREE.Group();
+  holder.add(clone);
+  holder.scale.setScalar(baseScale());
+  exportRoot.add(holder);
+  exportRoot.updateMatrixWorld(true);
+  try {
+    const exporter = new USDZExporter();
+    const buffer = await exporter.parseAsync(exportRoot);
+    const blob = new Blob([buffer], { type: 'model/vnd.usdz+zip' });
+    const a = document.createElement('a');
+    a.rel = 'ar';
+    a.href = URL.createObjectURL(blob);
+    a.download = 'modelo.usdz';
+    a.appendChild(document.createElement('img')); // exigido pelo Quick Look
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => a.remove(), 1000);
+    setStatus('Abrindo AR Quick Look…');
+  } catch (e) { setStatus('Falha ao gerar USDZ: ' + e.message); }
+};
+
+/* ---------- Loop de renderização ---------- */
+renderer.setAnimationLoop((time, frame) => {
+  if (frame) {
+    const session = renderer.xr.getSession();
+    const refSpace = renderer.xr.getReferenceSpace();
+    if (!hitTestRequested) {
+      session.requestReferenceSpace('viewer').then((viewerSpace) =>
+        session.requestHitTestSource({ space: viewerSpace }).then((src) => (hitTestSource = src)));
+      hitTestRequested = true;
+    }
+    if (hitTestSource && !placed) {
+      const hits = frame.getHitTestResults(hitTestSource);
+      if (hits.length) {
+        reticle.visible = true;
+        reticle.matrix.fromArray(hits[0].getPose(refSpace).transform.matrix);
+      } else reticle.visible = false;
+    }
+  } else {
+    controls.update();
+  }
+  renderer.render(scene, camera);
+});
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
