@@ -142,12 +142,17 @@
   .panel .x { width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 50%;
     background: var(--concreto); color: var(--tinta); cursor: pointer; flex: none; }
   .panel .body { overflow: auto; padding: 4px 16px 18px; font-size: 15px; -webkit-overflow-scrolling: touch; }
-  #catPanel { left: calc(16px + var(--safe-l)); top: calc(76px + var(--safe-t)); width: 320px; max-height: calc(100vh - 220px); }
   /* Tela dividida: informações no quarto de baixo, desenho nos três quartos de cima */
   :root { --info-h: max(25vh, 170px); }
-  #propPanel { left: 0; right: 0; bottom: 0; top: auto; width: auto; height: var(--info-h); border-radius: 16px 16px 0 0;
+  #catPanel, #propPanel { left: 0; right: 0; bottom: 0; top: auto; width: auto; height: var(--info-h); border-radius: 16px 16px 0 0;
     padding-bottom: var(--safe-b); box-shadow: 0 -8px 24px rgba(0,0,0,.3); }
-  #propPanel header { padding: 10px 16px 8px; align-items: center; }
+  #catPanel header, #propPanel header { padding: 10px 16px 8px; align-items: center; }
+  #catPanel header { padding-left: 12px; }
+  #catSearch { flex: 1; min-width: 0; height: 38px; border: 1px solid var(--concreto-2); border-radius: 999px; padding: 0 14px;
+    background: #fff; color: var(--tinta); font: inherit; font-size: 15px; }
+  #catPanel .body { padding-top: 0; }
+  #catPanel .cat-actions { padding: 8px 0 2px; }
+  @media (min-width: 860px) { #catPanel .body > * { max-width: 880px; margin-left: auto; margin-right: auto; } }
   #propPanel h3 { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
   #propPanel .sub { font-size: 13px; margin-top: 0; }
   #propPanel .x { width: 32px; height: 32px; }
@@ -160,27 +165,35 @@
   }
   body.split #app { bottom: var(--info-h); }
   body.split #dock, body.split #status, body.split #retryBtn { display: none; }
-  body.split #catPanel { display: none; }
   #installSheet { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(380px, calc(100vw - 32px)); }
   @media (max-width: 859px) {
-    #catPanel { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-height: 62vh;
-      border-radius: 18px 18px 0 0; padding-bottom: var(--safe-b); }
-    #catPanel header { padding-top: 22px; position: relative; }
-    #catPanel header::before { content: ''; position: absolute; top: 8px; left: 50%;
-      width: 40px; height: 4px; margin-left: -20px; border-radius: 2px; background: var(--concreto-2); }
   }
 
   .cat-actions { display: flex; gap: 8px; padding: 12px 0 6px; }
   .link-btn { border: 1px solid var(--concreto-2); background: #fff; border-radius: 999px; padding: 6px 14px;
     font-size: 14px; font-weight: 600; cursor: pointer; }
-  .cat-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--concreto); cursor: pointer; }
-  .cat-row:last-child { border-bottom: 0; }
-  .cat-row input { appearance: none; -webkit-appearance: none; width: 22px; height: 22px; margin: 0; flex: none;
-    border: 2px solid #9AA2AA; border-radius: 6px; display: grid; place-items: center; cursor: pointer; }
-  .cat-row input:checked { background: var(--grafite); border-color: var(--grafite); }
-  .cat-row input:checked::after { content: ''; width: 6px; height: 11px; border: solid var(--sinal); border-width: 0 2.5px 2.5px 0;
-    transform: translateY(-1px) rotate(45deg); }
-  .cat-row .name { flex: 1; min-width: 0; font-weight: 600; }
+  .cat-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--concreto); }
+  .cat-row input, .el-row input { appearance: none; -webkit-appearance: none; width: 22px; height: 22px; margin: 0; flex: none;
+    border: 2px solid #9AA2AA; border-radius: 6px; display: grid; place-items: center; cursor: pointer; background: #fff; }
+  .el-row input { width: 19px; height: 19px; border-radius: 5px; }
+  .cat-row input:checked, .el-row input:checked { background: var(--grafite); border-color: var(--grafite); }
+  .cat-row input:checked::after, .el-row input:checked::after { content: ''; width: 5px; height: 10px; border: solid var(--sinal);
+    border-width: 0 2.5px 2.5px 0; transform: translateY(-1px) rotate(45deg); }
+  .cat-row input:indeterminate::after { width: 10px; height: 0; border-width: 0 0 2.5px 0; transform: none; }
+  .cat-row input:disabled, .el-row input:disabled { opacity: .35; cursor: default; }
+  .cat-row .name { flex: 1; min-width: 0; font-weight: 600; text-align: left; background: none; border: 0; padding: 4px 0;
+    color: inherit; cursor: pointer; font-size: 15px; }
+  .chev { width: 34px; height: 34px; flex: none; border: 0; background: none; display: grid; place-items: center;
+    color: var(--tinta-suave); cursor: pointer; border-radius: 50%; }
+  .chev:hover { background: var(--concreto); }
+  .chev.open svg { transform: rotate(90deg); }
+  .el-list { padding: 0 0 6px 34px; border-bottom: 1px solid var(--concreto); }
+  .el-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+  .el-name { flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 3px 0; cursor: pointer;
+    font-size: 14px; color: var(--tinta); overflow-wrap: anywhere; }
+  .el-name small { display: block; color: var(--tinta-suave); font-size: 12px; }
+  .el-name:hover { color: #1565C0; }
+  .el-list .muted { margin: 6px 0; }
   .cat-row .name small { display: block; font-weight: 400; font-size: 13px; color: var(--tinta-suave); }
   .cat-row .n { font-variant-numeric: tabular-nums; color: var(--tinta-suave); font-size: 14px; }
 
@@ -238,6 +251,7 @@
     <symbol id="i-escala" viewBox="0 0 24 24"><path d="M3.5 15.5 15.5 3.5l5 5-12 12-5-5Z"/><path d="m7 12 2 2M10 9l2 2M13 6l2 2"/></symbol>
     <symbol id="i-ar" viewBox="0 0 24 24"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
     <symbol id="i-baixar" viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5"/><path d="M5 20h14"/></symbol>
     <symbol id="i-compartilhar" viewBox="0 0 24 24"><path d="M12 15V3.5M8 7.5l4-4 4 4"/><path d="M8 11H6a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-2"/></symbol>
     <symbol id="i-girar-e" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7L4 8.5"/><path d="M4 3.5v5h5"/></symbol>
@@ -298,13 +312,13 @@
 </nav>
 <input type="file" id="file" accept=".ifc" />
 
-<section class="panel" id="catPanel" aria-label="Categorias">
-  <header><div class="t"><h3>Categorias</h3><div class="sub">Escolha o que aparece no 3D e no AR</div></div>
+<section class="panel" id="catPanel" aria-label="Categorias e elementos">
+  <header><input id="catSearch" type="search" placeholder="Buscar categoria ou elemento" aria-label="Buscar categoria ou elemento" autocomplete="off" />
     <button class="x" data-close="catPanel" type="button" aria-label="Fechar"><svg class="i"><use href="#i-x"/></svg></button></header>
   <div class="body">
     <div class="cat-actions">
-      <button class="link-btn" id="catAll" type="button">Mostrar todas</button>
-      <button class="link-btn" id="catNone" type="button">Esconder todas</button>
+      <button class="link-btn" id="catAll" type="button">Mostrar tudo</button>
+      <button class="link-btn" id="catNone" type="button">Esconder tudo</button>
     </div>
     <div id="catList"></div>
   </div>
@@ -443,7 +457,11 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   // Seleção de elemento → propriedades
   if (!hit) { clearSelection(); return; }
   const id = elementAtFace(hit.object, hit.faceIndex);
-  if (id != null) selectElement(id);
+  if (id != null) {
+    const fromList = $('catPanel').classList.contains('open');
+    selectElement(id);
+    if (fromList) returnToCat = true;
+  }
 });
 
 /* ---------- Seleção e propriedades ---------- */
@@ -457,7 +475,7 @@ const hlMat = new THREE.MeshLambertMaterial({ color: 0x1e90ff, emissive: 0x0a3d8
 const hlEdgeMat = new THREE.LineBasicMaterial({ color: 0x062a63 });
 
 function elementAtFace(mesh, faceIndex) {
-  const ranges = mesh.userData.ranges; // ordenado por start
+  const ranges = mesh.userData.liveRanges; // faixas visíveis, ordenadas por start
   const pos = faceIndex * 3;
   let lo = 0, hi = ranges.length - 1;
   while (lo <= hi) {
@@ -469,20 +487,23 @@ function elementAtFace(mesh, faceIndex) {
   return null;
 }
 
-function clearSelection() {
+let returnToCat = false; // seleção feita pela lista de elementos: ao fechar, volta para a lista
+function clearSelection(reopenList = true) {
   for (const h of highlight) { model.remove(h); h.geometry.dispose(); }
   highlight = []; selectedId = null;
   $('propPanel').classList.remove('open');
-  document.body.classList.remove('split');
+  if (reopenList && returnToCat && model) { returnToCat = false; openPanel('catPanel'); return; }
+  returnToCat = false;
+  if (!$('catPanel').classList.contains('open')) document.body.classList.remove('split');
 }
 
 function selectElement(id) {
-  clearSelection();
+  clearSelection(false);
   selectedId = id;
   for (const { mesh, start, count } of elementRanges.get(id) || []) {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', mesh.geometry.attributes.position);
-    g.setIndex(new THREE.BufferAttribute(mesh.geometry.index.array.slice(start, start + count), 1));
+    g.setIndex(new THREE.BufferAttribute(mesh.userData.fullIndex.slice(start, start + count), 1));
     const h = new THREE.Mesh(g, hlMat);
     h.userData.isHighlight = true;
     h.renderOrder = 10;
@@ -504,7 +525,7 @@ const focusAnim = { active: false };
 function focusOn(id) {
   const box = new THREE.Box3(), p = new THREE.Vector3();
   for (const { mesh, start, count } of elementRanges.get(id) || []) {
-    const pos = mesh.geometry.attributes.position, idx = mesh.geometry.index.array;
+    const pos = mesh.geometry.attributes.position, idx = mesh.userData.fullIndex;
     for (let k = start; k < start + count; k++) box.expandByPoint(p.fromBufferAttribute(pos, idx[k]));
   }
   if (box.isEmpty()) return;
@@ -544,8 +565,10 @@ function propValue(p) {
 const kv = (k, v) => (v === '' || v == null ? '' : `<div class="kv"><span>${esc(k)}</span><span>${esc(v)}</span></div>`);
 
 function openPanel(id) {
-  if (innerWidth < 860) for (const p of ['catPanel', 'propPanel']) if (p !== id) $(p).classList.remove('open');
+  for (const p of ['catPanel', 'propPanel']) if (p !== id) $(p).classList.remove('open');
   $(id).classList.add('open');
+  document.body.classList.add('split');
+  $('catBtn').setAttribute('aria-pressed', String(id === 'catPanel'));
 }
 
 async function showProperties(id) {
@@ -607,40 +630,130 @@ const friendlyType = (t) => TYPE_PT[String(t).toUpperCase()] || t;
 const HIDDEN_BY_DEFAULT = new Set(['IFCSPACE', 'IFCOPENINGELEMENT']);
 const isHiddenDefault = (t) => HIDDEN_BY_DEFAULT.has(String(t).toUpperCase());
 
-function buildCategoryPanel() {
-  const counts = new Map();
-  for (const [id, ranges] of elementRanges) {
-    const t = ranges[0].mesh.userData.ifcType;
-    counts.set(t, (counts.get(t) || 0) + 1);
+/* Categorias e elementos: busca, mostrar/esconder por categoria ou por elemento */
+const hiddenEls = new Set();   // elementos escondidos individualmente
+const typeOn = new Map();      // categoria ligada/desligada
+const expanded = new Set();    // categorias abertas na lista
+const elsByType = new Map();   // categoria → ids dos elementos
+const nameOf = new Map();
+let catTypes = [];
+const norm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const typeOfEl = (id) => elementRanges.get(id)?.[0].mesh.userData.ifcType;
+
+function elName(id) {
+  if (!nameOf.has(id)) {
+    let n = '';
+    try { const l = ifcApi.GetLine(modelID, id, false); n = val(l.Name) || val(l.Tag) || ''; } catch {}
+    nameOf.set(id, String(n || `${friendlyType(typeOfEl(id))} ${id}`));
   }
-  const types = [...counts.keys()].sort((a, b) => friendlyType(a).localeCompare(friendlyType(b), 'pt'));
-  $('catList').innerHTML = types.map((t) => `
-    <label class="cat-row"><input type="checkbox" data-type="${t}" ${isHiddenDefault(t) ? '' : 'checked'} />
-      <span class="name">${esc(friendlyType(t))}${friendlyType(t) !== t ? `<small>${esc(t)}</small>` : ''}</span>
-      <span class="n">${counts.get(t)}</span></label>`).join('');
-  for (const t of types) setTypeVisible(t, !isHiddenDefault(t));
+  return nameOf.get(id);
 }
 
-function setTypeVisible(type, on) {
-  for (const m of model.children) if (m.userData.ifcType === type) m.visible = on;
-  if (!on && selectedId != null && elementRanges.get(selectedId)?.[0].mesh.userData.ifcType === type) clearSelection();
+// Reconstrói a malha da categoria sem os triângulos dos elementos escondidos
+function applyType(t) {
+  for (const m of model.children) {
+    if (m.userData.ifcType !== t || m.userData.isHighlight || !m.isMesh) continue;
+    const full = m.userData.fullIndex;
+    const live = m.userData.ranges.filter((r) => !hiddenEls.has(r.id));
+    if (live.length !== m.userData.liveRanges.length) {
+      let n = 0; for (const r of live) n += r.count;
+      const arr = new full.constructor(n), liveRanges = [];
+      let o = 0;
+      for (const r of live) { arr.set(full.subarray(r.start, r.start + r.count), o); liveRanges.push({ id: r.id, start: o, count: r.count }); o += r.count; }
+      m.geometry.setIndex(new THREE.BufferAttribute(arr, 1));
+      m.userData.liveRanges = liveRanges;
+    }
+    m.visible = typeOn.get(t) && live.length > 0;
+  }
+  if (selectedId != null && (hiddenEls.has(selectedId) || !typeOn.get(typeOfEl(selectedId)))) clearSelection(false);
+}
+
+function buildCategoryPanel() {
+  elsByType.clear(); hiddenEls.clear(); typeOn.clear(); expanded.clear(); nameOf.clear();
+  $('catSearch').value = '';
+  for (const [id, ranges] of elementRanges) {
+    const t = ranges[0].mesh.userData.ifcType;
+    if (!elsByType.has(t)) elsByType.set(t, []);
+    elsByType.get(t).push(id);
+  }
+  catTypes = [...elsByType.keys()].sort((a, b) => friendlyType(a).localeCompare(friendlyType(b), 'pt'));
+  for (const t of catTypes) { typeOn.set(t, !isHiddenDefault(t)); applyType(t); }
+  renderCatList();
+}
+
+function renderCatList() {
+  const q = norm($('catSearch').value.trim());
+  let html = '';
+  for (const t of catTypes) {
+    const ids = elsByType.get(t), tName = friendlyType(t);
+    const typeMatch = !q || norm(tName).includes(q) || norm(t).includes(q);
+    let shown = ids;
+    if (!typeMatch) shown = ids.filter((id) => norm(elName(id)).includes(q));
+    if (!typeMatch && !shown.length) continue;
+    const open = expanded.has(t) || !typeMatch;
+    const on = typeOn.get(t);
+    const hiddenCount = ids.reduce((n, id) => n + (hiddenEls.has(id) ? 1 : 0), 0);
+    const info = `${t !== tName ? esc(t) + ', ' : ''}${ids.length} ${ids.length === 1 ? 'elemento' : 'elementos'}` +
+      (hiddenCount ? `, ${hiddenCount} ${hiddenCount === 1 ? 'escondido' : 'escondidos'}` : '');
+    html += `<div class="cat-row">
+      <input type="checkbox" data-type="${esc(t)}" aria-label="Mostrar ${esc(tName)}" ${on ? 'checked' : ''} ${on && hiddenCount ? 'data-partial="1"' : ''} />
+      <button class="name" type="button" data-expand="${esc(t)}">${esc(tName)}<small>${info}</small></button>
+      <button class="chev ${open ? 'open' : ''}" type="button" data-expand="${esc(t)}" aria-label="${open ? 'Fechar' : 'Ver'} elementos de ${esc(tName)}"><svg class="i"><use href="#i-chev"/></svg></button>
+    </div>`;
+    if (open) {
+      const list = [...shown].sort((a, b) => elName(a).localeCompare(elName(b), 'pt', { numeric: true }));
+      const max = 300;
+      html += '<div class="el-list">' + list.slice(0, max).map((id) => `
+        <div class="el-row"><input type="checkbox" data-el="${id}" aria-label="Mostrar ${esc(elName(id))}" ${hiddenEls.has(id) ? '' : 'checked'} ${on ? '' : 'disabled'} />
+          <button class="el-name" type="button" data-go="${id}">${esc(elName(id))}${storeyOf.get(id) ? `<small>${esc(storeyOf.get(id))}</small>` : ''}</button></div>`).join('') +
+        (list.length > max ? `<p class="muted">Mais ${list.length - max} elementos. Use a busca para encontrar um específico.</p>` : '') + '</div>';
+    }
+  }
+  $('catList').innerHTML = html || '<p class="muted">Nada encontrado com esse nome.</p>';
+  $('catList').querySelectorAll('input[data-partial]').forEach((i) => (i.indeterminate = true));
 }
 
 $('catList').addEventListener('change', (e) => {
-  const t = e.target.dataset.type;
-  if (t) setTypeVisible(t, e.target.checked);
+  const t = e.target.dataset.type, el = e.target.dataset.el;
+  if (t) { typeOn.set(t, e.target.checked); applyType(t); renderCatList(); }
+  if (el) {
+    const id = Number(el);
+    if (e.target.checked) hiddenEls.delete(id); else hiddenEls.add(id);
+    applyType(typeOfEl(id)); renderCatList();
+  }
 });
-$('catAll').onclick = () => $('catList').querySelectorAll('input').forEach((i) => { i.checked = true; setTypeVisible(i.dataset.type, true); });
-$('catNone').onclick = () => $('catList').querySelectorAll('input').forEach((i) => { i.checked = false; setTypeVisible(i.dataset.type, false); });
+$('catList').addEventListener('click', (e) => {
+  const exp = e.target.closest('[data-expand]');
+  if (exp) { const t = exp.dataset.expand; if (expanded.has(t)) expanded.delete(t); else expanded.add(t); renderCatList(); return; }
+  const go = e.target.closest('[data-go]');
+  if (go) {
+    const id = Number(go.dataset.go), t = typeOfEl(id);
+    if (hiddenEls.has(id) || !typeOn.get(t)) { hiddenEls.delete(id); typeOn.set(t, true); applyType(t); renderCatList(); }
+    selectElement(id);
+    returnToCat = true;
+  }
+});
+let searchTimer = null;
+$('catSearch').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(renderCatList, 150); });
+$('catAll').onclick = () => { hiddenEls.clear(); for (const t of catTypes) { typeOn.set(t, true); applyType(t); } renderCatList(); };
+$('catNone').onclick = () => { for (const t of catTypes) { typeOn.set(t, false); applyType(t); } renderCatList(); };
 $('catBtn').onclick = () => {
-  const open = !$('catPanel').classList.contains('open');
-  if (open) openPanel('catPanel'); else $('catPanel').classList.remove('open');
-  $('catBtn').setAttribute('aria-pressed', String(open));
+  if ($('catPanel').classList.contains('open')) {
+    $('catPanel').classList.remove('open'); $('catBtn').setAttribute('aria-pressed', 'false');
+    document.body.classList.remove('split');
+  } else {
+    if (selectedId != null) clearSelection(false);
+    openPanel('catPanel');
+  }
 };
 document.querySelectorAll('[data-close]').forEach((b) => (b.onclick = () => {
-  $(b.dataset.close).classList.remove('open');
-  if (b.dataset.close === 'propPanel') clearSelection();
-  if (b.dataset.close === 'catPanel') $('catBtn').setAttribute('aria-pressed', 'false');
+  const id = b.dataset.close;
+  if (id === 'propPanel') { clearSelection(); return; }
+  $(id).classList.remove('open');
+  if (id === 'catPanel') {
+    $('catBtn').setAttribute('aria-pressed', 'false');
+    if (!$('propPanel').classList.contains('open')) document.body.classList.remove('split');
+  }
 }));
 
 /* ---------- Motor IFC ---------- */
@@ -727,6 +840,8 @@ async function loadIfc(file) {
     const m = new THREE.Mesh(geo, mat);
     m.userData.ifcType = b.type;
     m.userData.ranges = b.ranges;
+    m.userData.liveRanges = b.ranges;
+    m.userData.fullIndex = geo.index.array;
     for (const r of b.ranges) {
       let list = elementRanges.get(r.id);
       if (!list) elementRanges.set(r.id, (list = []));
