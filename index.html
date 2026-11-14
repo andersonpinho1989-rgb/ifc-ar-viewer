@@ -2,80 +2,197 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>IFC em Realidade Aumentada</title>
 <link rel="manifest" href="manifest.json" />
-<meta name="theme-color" content="#0f1216" />
+<meta name="theme-color" content="#1F252B" />
 <link rel="icon" href="icon-192.png" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black" />
 <meta name="apple-mobile-web-app-title" content="IFC AR" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap" />
 <style>
-  #offline { font-size:12px; color:var(--muted); padding:4px 10px; border:1px solid #343c48; border-radius:20px; }
-  #offline.ok { color:#5fd38d; border-color:#2f6b47; }
-  :root { --bg:#0f1216; --panel:rgba(20,24,30,.88); --fg:#e8ecf1; --muted:#9aa4b2; --accent:#3d8bfd; }
-  * { box-sizing:border-box; }
-  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg);
-    font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; overflow:hidden; }
-  #app { position:fixed; inset:0; }
-  canvas { display:block; }
-
-  #topbar { position:fixed; top:0; left:0; right:0; padding:12px 14px; display:flex; gap:10px;
-    align-items:center; flex-wrap:wrap; background:linear-gradient(var(--panel),transparent); z-index:10; }
-  #topbar h1 { font-size:15px; margin:0 8px 0 0; font-weight:600; }
-  .btn { background:#252b34; color:var(--fg); border:1px solid #343c48; border-radius:10px;
-    padding:9px 13px; font-size:14px; cursor:pointer; user-select:none; }
-  .btn:hover { border-color:var(--accent); }
-  .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
-  .btn:disabled { opacity:.45; cursor:default; }
-  select.btn { appearance:none; }
-  #file { display:none; }
-
-  #drop { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:5; pointer-events:none; }
-  #drop .card { pointer-events:auto; text-align:center; padding:28px 30px; border:2px dashed #3a4350;
-    border-radius:16px; background:var(--panel); max-width:420px; margin:0 20px; }
-  #drop.hover .card { border-color:var(--accent); }
-  #drop p { color:var(--muted); font-size:14px; line-height:1.5; }
-
-  #status { position:fixed; bottom:14px; left:14px; right:14px; text-align:center; font-size:13px;
-    color:var(--muted); z-index:10; pointer-events:none; }
-
-  /* Overlay exibido durante a sessão AR (WebXR dom-overlay) */
-  #arOverlay { display:none; position:fixed; inset:0; pointer-events:none; }
-  #arOverlay.on { display:block; }
-  #arHint { position:absolute; top:18px; left:50%; transform:translateX(-50%); background:var(--panel);
-    padding:8px 14px; border-radius:20px; font-size:14px; }
-  #arControls { position:absolute; bottom:24px; left:0; right:0; display:flex; justify-content:center;
-    gap:8px; flex-wrap:wrap; pointer-events:auto; padding:0 10px; }
-  #arExit { position:absolute; top:14px; right:14px; pointer-events:auto; }
-
-  /* Painéis: categorias e propriedades */
-  .panel { position:fixed; z-index:20; background:rgba(20,24,30,.96); border:1px solid #2d3540;
-    border-radius:14px; display:none; flex-direction:column; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,.4); }
-  .panel.open { display:flex; }
-  .panel header { display:flex; align-items:center; gap:8px; padding:12px 14px; border-bottom:1px solid #2d3540; }
-  .panel header h3 { margin:0; font-size:15px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .panel .x { background:none; border:0; color:var(--muted); font-size:20px; cursor:pointer; padding:0 4px; }
-  .panel .body { overflow:auto; padding:6px 14px 14px; font-size:13px; }
-  #catPanel { left:10px; top:120px; width:300px; max-height:calc(100vh - 170px); }
-  #propPanel { right:10px; top:120px; width:360px; max-height:calc(100vh - 170px); }
-  @media (max-width:700px) {
-    #catPanel, #propPanel { left:0; right:0; top:auto; bottom:0; width:auto; max-height:48vh;
-      border-radius:16px 16px 0 0; }
+  :root {
+    --grafite: #1F252B;
+    --grafite-2: #2B323A;
+    --ardosia: #38404A;
+    --concreto: #E6E7E3;
+    --concreto-2: #D5D7D2;
+    --papel: #F4F5F2;
+    --tinta: #1F252B;
+    --tinta-suave: #5D6670;
+    --sinal: #FFC61A;
+    --sinal-escuro: #D9A400;
+    --marco: #E8492C;
+    --ok: #3FB06D;
+    --raio-sm: 8px;
+    --raio: 14px;
+    --safe-t: env(safe-area-inset-top, 0px);
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-l: env(safe-area-inset-left, 0px);
+    --safe-r: env(safe-area-inset-right, 0px);
   }
-  .cat-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #222a33; cursor:pointer; }
-  .cat-row input { width:18px; height:18px; accent-color:var(--accent); }
-  .cat-row .name { flex:1; }
-  .cat-row small, .muted { color:var(--muted); }
-  .cat-actions { display:flex; gap:8px; padding:8px 0; }
-  .cat-actions .btn { padding:6px 10px; font-size:13px; }
-  .pset { margin-top:12px; }
-  .pset h4 { margin:0 0 4px; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--accent); }
-  .kv { display:grid; grid-template-columns:42% 58%; gap:4px 8px; padding:3px 0; border-bottom:1px solid #20262e; }
-  .kv span:first-child { color:var(--muted); word-break:break-word; }
-  .kv span:last-child { word-break:break-word; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--grafite); color: var(--concreto);
+    font-family: Barlow, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 16px; line-height: 1.4; }
+  button, select { font: inherit; color: inherit; }
+  svg.i { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8;
+    stroke-linecap: round; stroke-linejoin: round; }
+  :focus-visible { outline: 3px solid var(--sinal); outline-offset: 2px; }
+  #file { display: none; }
+
+  /* Viewport 3D */
+  #app { position: fixed; inset: 0;
+    background: radial-gradient(120% 90% at 50% 40%, #4A535E 0%, var(--ardosia) 55%, #2A3138 100%); }
+  canvas { display: block; touch-action: none; }
+
+  /* Barra superior */
+  #topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 10; display: flex; align-items: center; gap: 12px;
+    padding: calc(10px + var(--safe-t)) calc(16px + var(--safe-r)) 10px calc(16px + var(--safe-l));
+    background: linear-gradient(rgba(31,37,43,.92), rgba(31,37,43,.0)); pointer-events: none; }
+  #topbar > * { pointer-events: auto; }
+  .marca { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; letter-spacing: .01em; white-space: nowrap; }
+  .marca svg { width: 26px; height: 26px; }
+  #fileInfo { min-width: 0; flex: 1; display: flex; flex-direction: column; border-left: 1px solid rgba(230,231,227,.18);
+    padding-left: 12px; }
+  #fileInfo:empty { display: none; }
+  #fileName { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #fileMeta { font-size: 13px; color: #AEB5BC; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .spacer { flex: 1; }
+  #fileInfo:not(:empty) + .spacer { display: none; }
+  #offline { display: none; align-items: center; gap: 6px; font-size: 13px; color: #AEB5BC; white-space: nowrap; }
+  #offline::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #8A929B; }
+  #offline.ok::before { background: var(--ok); }
+  #installBtn { display: none; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; cursor: pointer;
+    background: rgba(230,231,227,.12); border: 1px solid rgba(230,231,227,.25); font-size: 14px; font-weight: 600; }
+  #installBtn svg { width: 18px; height: 18px; }
+
+  /* Mensagem de status */
+  #status { position: fixed; left: 50%; transform: translateX(-50%); z-index: 9;
+    bottom: calc(150px + var(--safe-b)); max-width: min(92vw, 560px);
+    padding: 8px 14px; border-radius: 999px; background: rgba(31,37,43,.82); color: var(--concreto);
+    font-size: 14px; text-align: center; pointer-events: none; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  #status:empty { display: none; }
+  #anchorReset { position: fixed; z-index: 9; left: calc(16px + var(--safe-l)); top: calc(72px + var(--safe-t));
+    display: none; align-items: center; gap: 8px; padding: 6px 12px 6px 10px; border-radius: 999px; cursor: pointer;
+    background: var(--papel); color: var(--tinta); border: 0; font-size: 14px; font-weight: 600; }
+  #anchorReset.on { display: flex; }
+  #anchorReset .pino { width: 10px; height: 10px; border-radius: 50%; background: var(--marco); box-shadow: 0 0 0 3px rgba(232,73,44,.25); }
+
+  /* Barra de ferramentas inferior */
+  #dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--papel); color: var(--tinta);
+    padding: 10px calc(12px + var(--safe-r)) calc(12px + var(--safe-b)) calc(12px + var(--safe-l));
+    display: grid; grid-template-columns: 1fr; gap: 10px; box-shadow: 0 -10px 30px rgba(0,0,0,.25); }
+  #dock::before { content: ''; position: absolute; left: 0; right: 0; top: -6px; height: 6px;
+    background: repeating-linear-gradient(-45deg, var(--sinal) 0 12px, var(--grafite) 12px 24px); }
+  .tools { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .tool { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 58px;
+    padding: 6px 4px; border: 0; border-radius: var(--raio-sm); background: transparent; cursor: pointer;
+    font-size: 13px; font-weight: 600; color: var(--tinta); position: relative; }
+  .tool:hover:not(:disabled) { background: var(--concreto); }
+  .tool:disabled { opacity: .35; cursor: default; }
+  .tool[aria-pressed="true"] { background: var(--grafite); color: var(--sinal); }
+  .tool select { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .tool select:disabled { cursor: default; }
+  #scaleLabel { font-variant-numeric: tabular-nums; }
+  .primary { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 54px; border: 0;
+    border-radius: var(--raio); background: var(--sinal); color: var(--grafite); font-size: 18px; font-weight: 700;
+    cursor: pointer; box-shadow: inset 0 -3px 0 var(--sinal-escuro); }
+  .primary:disabled { background: var(--concreto-2); color: #8A929B; box-shadow: none; cursor: default; }
+  .primary svg { width: 24px; height: 24px; stroke-width: 2; }
+  #iosBtn { display: none; }
+  @media (min-width: 860px) {
+    #dock { left: 50%; right: auto; bottom: calc(16px + var(--safe-b)); transform: translateX(-50%); width: 760px;
+      grid-template-columns: 1fr 230px; align-items: center; border-radius: var(--raio); padding: 10px; }
+    #dock::before { left: 14px; right: 14px; border-radius: 3px 3px 0 0; }
+    #status { bottom: calc(110px + var(--safe-b)); }
+  }
+
+  /* Estado vazio */
+  #drop { position: fixed; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center;
+    padding: 90px 20px 170px; pointer-events: none; }
+  #drop .card { pointer-events: auto; width: min(420px, 100%); text-align: left; padding: 26px 24px;
+    background: rgba(31,37,43,.86); border: 2px dashed rgba(230,231,227,.28); border-radius: var(--raio);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  #drop.hover .card { border-color: var(--sinal); }
+  #drop h2 { margin: 0 0 6px; font-size: 26px; line-height: 1.15; font-weight: 700; }
+  #drop p { margin: 0 0 20px; color: #C3C8CD; font-size: 15px; max-width: 34ch; }
+  #drop .primary { width: 100%; }
+  #drop .dica { display: block; margin-top: 12px; font-size: 13px; color: #9AA2AA; }
+  @media (hover: none) { #drop .dica { display: none; } }
+
+  /* Painéis (categorias, propriedades, instalação) */
+  .panel { position: fixed; z-index: 20; display: none; flex-direction: column; overflow: hidden;
+    background: var(--papel); color: var(--tinta); border-radius: var(--raio); box-shadow: 0 16px 40px rgba(0,0,0,.35); }
+  .panel.open { display: flex; }
+  .panel header { display: flex; align-items: flex-start; gap: 10px; padding: 16px 16px 12px; border-bottom: 1px solid var(--concreto-2); }
+  .panel header .t { flex: 1; min-width: 0; }
+  .panel h3 { margin: 0; font-size: 19px; line-height: 1.2; font-weight: 700; overflow-wrap: anywhere; }
+  .panel .sub { margin-top: 2px; font-size: 14px; color: var(--tinta-suave); }
+  .panel .x { width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 50%;
+    background: var(--concreto); color: var(--tinta); cursor: pointer; flex: none; }
+  .panel .body { overflow: auto; padding: 4px 16px 18px; font-size: 15px; -webkit-overflow-scrolling: touch; }
+  #catPanel { left: calc(16px + var(--safe-l)); top: calc(76px + var(--safe-t)); width: 320px; max-height: calc(100vh - 220px); }
+  #propPanel { right: calc(16px + var(--safe-r)); top: calc(76px + var(--safe-t)); width: 380px; max-height: calc(100vh - 220px); }
+  #installSheet { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(380px, calc(100vw - 32px)); }
+  @media (max-width: 859px) {
+    #catPanel, #propPanel { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-height: 62vh;
+      border-radius: 18px 18px 0 0; padding-bottom: var(--safe-b); }
+    #catPanel header, #propPanel header { padding-top: 22px; position: relative; }
+    #catPanel header::before, #propPanel header::before { content: ''; position: absolute; top: 8px; left: 50%;
+      width: 40px; height: 4px; margin-left: -20px; border-radius: 2px; background: var(--concreto-2); }
+  }
+
+  .cat-actions { display: flex; gap: 8px; padding: 12px 0 6px; }
+  .link-btn { border: 1px solid var(--concreto-2); background: #fff; border-radius: 999px; padding: 6px 14px;
+    font-size: 14px; font-weight: 600; cursor: pointer; }
+  .cat-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--concreto); cursor: pointer; }
+  .cat-row:last-child { border-bottom: 0; }
+  .cat-row input { appearance: none; -webkit-appearance: none; width: 22px; height: 22px; margin: 0; flex: none;
+    border: 2px solid #9AA2AA; border-radius: 6px; display: grid; place-items: center; cursor: pointer; }
+  .cat-row input:checked { background: var(--grafite); border-color: var(--grafite); }
+  .cat-row input:checked::after { content: ''; width: 6px; height: 11px; border: solid var(--sinal); border-width: 0 2.5px 2.5px 0;
+    transform: translateY(-1px) rotate(45deg); }
+  .cat-row .name { flex: 1; min-width: 0; font-weight: 600; }
+  .cat-row .name small { display: block; font-weight: 400; font-size: 13px; color: var(--tinta-suave); }
+  .cat-row .n { font-variant-numeric: tabular-nums; color: var(--tinta-suave); font-size: 14px; }
+
+  .pset { margin-top: 16px; }
+  .pset h4 { margin: 0 0 4px; font-size: 15px; font-weight: 700; color: var(--tinta); overflow-wrap: anywhere; }
+  .kv { display: grid; grid-template-columns: minmax(0, 44%) minmax(0, 56%); gap: 10px; padding: 7px 0;
+    border-bottom: 1px solid var(--concreto); font-size: 14px; }
+  .kv span:first-child { color: var(--tinta-suave); overflow-wrap: anywhere; }
+  .kv span:last-child { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .muted { color: var(--tinta-suave); font-size: 14px; }
+  .passos { margin: 8px 0 4px; padding-left: 22px; }
+  .passos li { margin: 10px 0; }
+  .passos svg { width: 18px; height: 18px; vertical-align: -3px; }
+
+  /* Sobreposição durante o AR (WebXR) */
+  #arOverlay { display: none; position: fixed; inset: 0; pointer-events: none; }
+  #arOverlay.on { display: block; }
+  #arHint { position: absolute; top: calc(16px + var(--safe-t)); left: 50%; transform: translateX(-50%); width: max-content;
+    max-width: calc(100vw - 120px); background: rgba(31,37,43,.85); color: var(--concreto); padding: 9px 16px;
+    border-radius: 999px; font-size: 15px; font-weight: 600; text-align: center; }
+  #arExit { position: absolute; top: calc(12px + var(--safe-t)); right: calc(12px + var(--safe-r)); pointer-events: auto;
+    width: 46px; height: 46px; border-radius: 50%; border: 0; background: var(--papel); color: var(--tinta);
+    display: grid; place-items: center; cursor: pointer; }
+  #arControls { position: absolute; bottom: calc(20px + var(--safe-b)); left: 0; right: 0; display: flex; justify-content: center;
+    gap: 10px; pointer-events: auto; padding: 0 12px; flex-wrap: wrap; }
+  #arControls button { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 64px; padding: 8px 6px;
+    border: 0; border-radius: var(--raio-sm); background: rgba(244,245,242,.94); color: var(--tinta);
+    font-size: 12px; font-weight: 600; cursor: pointer; }
+  #arControls button svg { pointer-events: none; }
+  #arControls button span { pointer-events: none; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .panel.open { animation: subir .18s ease-out; }
+    @keyframes subir { from { opacity: 0; translate: 0 12px; } to { opacity: 1; translate: 0 0; } }
+  }
 </style>
 
 <script type="importmap">
@@ -89,65 +206,113 @@
 </script>
 </head>
 <body>
+<!-- Ícones -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-abrir" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"/><path d="M3 7v11a1 1 0 0 0 1 1h14.5a1 1 0 0 0 1-.8L21.8 11a1 1 0 0 0-1-1.2H7.4a1 1 0 0 0-1 .8L4 19"/></symbol>
+    <symbol id="i-camadas" viewBox="0 0 24 24"><path d="M12 3 2.5 8 12 13l9.5-5L12 3Z"/><path d="m2.5 12.5 9.5 5 9.5-5"/><path d="m2.5 16.5 9.5 5 9.5-5"/></symbol>
+    <symbol id="i-ancora" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></symbol>
+    <symbol id="i-escala" viewBox="0 0 24 24"><path d="M3.5 15.5 15.5 3.5l5 5-12 12-5-5Z"/><path d="m7 12 2 2M10 9l2 2M13 6l2 2"/></symbol>
+    <symbol id="i-ar" viewBox="0 0 24 24"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-baixar" viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5"/><path d="M5 20h14"/></symbol>
+    <symbol id="i-compartilhar" viewBox="0 0 24 24"><path d="M12 15V3.5M8 7.5l4-4 4 4"/><path d="M8 11H6a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-2"/></symbol>
+    <symbol id="i-girar-e" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7L4 8.5"/><path d="M4 3.5v5h5"/></symbol>
+    <symbol id="i-girar-d" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.4-5.7L20 8.5"/><path d="M20 3.5v5h-5"/></symbol>
+    <symbol id="i-menos" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></symbol>
+    <symbol id="i-mais" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></symbol>
+    <symbol id="i-mover" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21Z"/><circle cx="12" cy="10" r="2.3"/></symbol>
+  </defs>
+</svg>
+
 <div id="app"></div>
 
-<div id="topbar">
-  <h1>IFC · Realidade Aumentada</h1>
-  <button class="btn" id="openBtn">📂 Abrir IFC</button>
-  <input type="file" id="file" accept=".ifc" />
-  <select class="btn" id="scaleSel" title="Escala do modelo no AR">
-    <option value="1">Escala 1:1 (real)</option>
-    <option value="0.1">1:10</option>
-    <option value="0.02">1:50</option>
-    <option value="0.01" selected>1:100 (maquete)</option>
-    <option value="0.005">1:200</option>
-    <option value="0.002">1:500</option>
-  </select>
-  <button class="btn" id="anchorBtn" disabled title="Clique num ponto do modelo para usá-lo como âncora">📌 Definir ancoragem</button>
-  <button class="btn" id="anchorReset" disabled title="Voltar a âncora para o centro da base">↺ Âncora padrão</button>
-  <button class="btn" id="catBtn" disabled>🗂️ Categorias</button>
-  <button class="btn primary" id="arBtn" disabled>🕶️ Ver em AR</button>
-  <button class="btn" id="iosBtn" style="display:none" disabled>🍎 AR no iPhone</button>
-  <button class="btn" id="installBtn" style="display:none">⬇️ Instalar app</button>
-  <span id="offline" style="display:none"></span>
-</div>
+<header id="topbar">
+  <div class="marca">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3Z" fill="#3D8BFD"/><path d="m4 7.5 8 4.5 8-4.5L12 3 4 7.5Z" fill="#78AFFF"/><path d="M12 12v9l8-4.5v-9L12 12Z" fill="#2563C8"/></svg>
+    IFC AR
+  </div>
+  <div id="fileInfo"></div>
+  <div class="spacer"></div>
+  <span id="offline" role="status"></span>
+  <button id="installBtn" type="button"><svg class="i"><use href="#i-baixar"/></svg>Instalar</button>
+</header>
 
 <div id="drop">
   <div class="card">
-    <h2 style="margin-top:0">Abra um arquivo .ifc</h2>
-    <p>Clique em <b>Abrir IFC</b> ou arraste o arquivo aqui.<br/>
-       O arquivo é processado localmente no seu navegador — nada é enviado para servidores.</p>
-    <button class="btn primary" id="openBtn2">Selecionar arquivo</button>
+    <h2>Abra um modelo IFC</h2>
+    <p>O arquivo é lido no próprio aparelho e não é enviado para nenhum servidor.</p>
+    <button class="primary" id="openBtn2" type="button"><svg class="i"><use href="#i-abrir"/></svg>Escolher arquivo</button>
+    <span class="dica">Você também pode arrastar o arquivo para esta janela.</span>
   </div>
 </div>
 
-<div id="status">Carregando motor IFC…</div>
+<button id="anchorReset" type="button" title="Voltar a âncora para o centro da base do modelo">
+  <span class="pino"></span>Âncora personalizada<svg class="i" style="width:16px;height:16px"><use href="#i-x"/></svg>
+</button>
 
-<div class="panel" id="catPanel">
-  <header><h3>Categorias</h3><button class="x" data-close="catPanel">✕</button></header>
+<div id="status" role="status" aria-live="polite">Carregando o leitor de IFC…</div>
+
+<nav id="dock" aria-label="Ferramentas">
+  <div class="tools">
+    <button class="tool" id="openBtn" type="button"><svg class="i"><use href="#i-abrir"/></svg>Abrir</button>
+    <button class="tool" id="catBtn" type="button" disabled aria-pressed="false"><svg class="i"><use href="#i-camadas"/></svg>Categorias</button>
+    <button class="tool" id="anchorBtn" type="button" disabled aria-pressed="false" title="Toque num ponto do modelo para usá-lo como âncora"><svg class="i"><use href="#i-ancora"/></svg>Âncora</button>
+    <label class="tool" title="Escala do modelo no AR"><svg class="i"><use href="#i-escala"/></svg><span id="scaleLabel">1:100</span>
+      <select id="scaleSel" aria-label="Escala do modelo no AR">
+        <option value="1">1:1, tamanho real</option>
+        <option value="0.1">1:10</option>
+        <option value="0.02">1:50</option>
+        <option value="0.01" selected>1:100, maquete</option>
+        <option value="0.005">1:200</option>
+        <option value="0.002">1:500</option>
+      </select>
+    </label>
+  </div>
+  <button class="primary" id="arBtn" type="button" disabled><svg class="i"><use href="#i-ar"/></svg>Ver em AR</button>
+  <button class="primary" id="iosBtn" type="button" disabled><svg class="i"><use href="#i-ar"/></svg>Ver em AR</button>
+</nav>
+<input type="file" id="file" accept=".ifc" />
+
+<section class="panel" id="catPanel" aria-label="Categorias">
+  <header><div class="t"><h3>Categorias</h3><div class="sub">Escolha o que aparece no 3D e no AR</div></div>
+    <button class="x" data-close="catPanel" type="button" aria-label="Fechar"><svg class="i"><use href="#i-x"/></svg></button></header>
   <div class="body">
     <div class="cat-actions">
-      <button class="btn" id="catAll">Mostrar todas</button>
-      <button class="btn" id="catNone">Esconder todas</button>
+      <button class="link-btn" id="catAll" type="button">Mostrar todas</button>
+      <button class="link-btn" id="catNone" type="button">Esconder todas</button>
     </div>
     <div id="catList"></div>
   </div>
-</div>
+</section>
 
-<div class="panel" id="propPanel">
-  <header><h3 id="propTitle">Propriedades</h3><button class="x" data-close="propPanel">✕</button></header>
+<section class="panel" id="propPanel" aria-label="Propriedades do elemento">
+  <header><div class="t"><h3 id="propTitle">Propriedades</h3><div class="sub" id="propSub"></div></div>
+    <button class="x" data-close="propPanel" type="button" aria-label="Fechar"><svg class="i"><use href="#i-x"/></svg></button></header>
   <div class="body" id="propBody"></div>
-</div>
+</section>
+
+<section class="panel" id="installSheet" aria-label="Instalar no iPhone">
+  <header><div class="t"><h3>Instalar no iPhone</h3><div class="sub">Depois de instalado, o app abre sem internet.</div></div>
+    <button class="x" data-close="installSheet" type="button" aria-label="Fechar"><svg class="i"><use href="#i-x"/></svg></button></header>
+  <div class="body">
+    <ol class="passos">
+      <li>Toque em <b>Compartilhar</b> <svg class="i"><use href="#i-compartilhar"/></svg> na barra do Safari. Nas versões mais novas do iOS, ele fica no menu <b>•••</b>.</li>
+      <li>Role a lista e toque em <b>Adicionar à Tela de Início</b>.</li>
+      <li>Toque em <b>Adicionar</b>. Abra o app sempre pelo ícone IFC AR.</li>
+    </ol>
+  </div>
+</section>
 
 <div id="arOverlay">
   <div id="arHint">Aponte para o chão e toque para posicionar</div>
-  <button class="btn" id="arExit">✕ Sair</button>
+  <button id="arExit" type="button" aria-label="Sair do AR"><svg class="i"><use href="#i-x"/></svg></button>
   <div id="arControls">
-    <button class="btn" data-act="rotL">⟲ Girar</button>
-    <button class="btn" data-act="rotR">⟳ Girar</button>
-    <button class="btn" data-act="smaller">－ Menor</button>
-    <button class="btn" data-act="bigger">＋ Maior</button>
-    <button class="btn" data-act="move">📍 Reposicionar</button>
+    <button type="button" data-act="rotL"><svg class="i"><use href="#i-girar-e"/></svg><span>Girar</span></button>
+    <button type="button" data-act="rotR"><svg class="i"><use href="#i-girar-d"/></svg><span>Girar</span></button>
+    <button type="button" data-act="smaller"><svg class="i"><use href="#i-menos"/></svg><span>Menor</span></button>
+    <button type="button" data-act="bigger"><svg class="i"><use href="#i-mais"/></svg><span>Maior</span></button>
+    <button type="button" data-act="move"><svg class="i"><use href="#i-mover"/></svg><span>Mover</span></button>
   </div>
 </div>
 
@@ -159,18 +324,18 @@ import * as WEBIFC from 'web-ifc';
 
 const $ = (id) => document.getElementById(id);
 const statusEl = $('status');
-const setStatus = (t) => (statusEl.textContent = t);
+const setStatus = (t) => (statusEl.textContent = t || '');
+const num = (v, d = 1) => Number(v).toLocaleString('pt-BR', { maximumFractionDigits: d });
 
 /* ---------- Cena 3D ---------- */
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
+renderer.setClearColor(0x000000, 0);
 renderer.xr.enabled = true;
 $('app').appendChild(renderer.domElement);
 
-const scene = new THREE.Scene();
-const bgColor = new THREE.Color(0x0f1216);
-scene.background = bgColor;
+const scene = new THREE.Scene(); // fundo transparente: o gradiente vem do CSS
 
 const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.01, 5000);
 camera.position.set(20, 15, 20);
@@ -178,12 +343,14 @@ camera.position.set(20, 15, 20);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.6));
-const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x4a535e, 1.7));
+const sun = new THREE.DirectionalLight(0xffffff, 1.3);
 sun.position.set(30, 50, 20);
 scene.add(sun);
 
-const grid = new THREE.GridHelper(100, 100, 0x334050, 0x1c232c);
+const grid = new THREE.GridHelper(100, 100, 0x6b7580, 0x4a535e);
+grid.material.transparent = true;
+grid.material.opacity = 0.55;
 scene.add(grid);
 
 // anchor: posição no mundo (AR); pivot: rotação/escala; model: geometria IFC centralizada
@@ -201,7 +368,7 @@ const defaultAnchor = new THREE.Vector3();
 const anchorLocal = new THREE.Vector3();
 const anchorMarker = new THREE.Group();
 {
-  const mat = new THREE.MeshBasicMaterial({ color: 0xff3b30, depthTest: false });
+  const mat = new THREE.MeshBasicMaterial({ color: 0xe8492c, depthTest: false });
   const pin = new THREE.Mesh(new THREE.ConeGeometry(0.6, 2, 16).rotateX(Math.PI), mat);
   pin.position.y = 1;
   const dot = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 12), mat);
@@ -210,10 +377,11 @@ const anchorMarker = new THREE.Group();
   anchorMarker.traverse((o) => (o.renderOrder = 999));
 }
 
-function setAnchor(p) {
+function setAnchor(p, custom = false) {
   anchorLocal.copy(p);
   model.position.set(-p.x, -p.y, -p.z);
   controls.target.set(0, modelSize.y / 2, 0);
+  $('anchorReset').classList.toggle('on', custom);
 }
 
 let pickingAnchor = false;
@@ -221,12 +389,13 @@ const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 let downPos = null;
 
-$('anchorBtn').onclick = () => {
-  pickingAnchor = !pickingAnchor;
-  $('anchorBtn').classList.toggle('primary', pickingAnchor);
-  setStatus(pickingAnchor ? 'Clique no ponto do modelo que será a âncora (ex.: canto de um pilar, marco topográfico)…' : 'Seleção de âncora cancelada');
-};
-$('anchorReset').onclick = () => { if (model) { setAnchor(defaultAnchor); setStatus('Âncora: centro da base do modelo'); } };
+function setPicking(on) {
+  pickingAnchor = on;
+  $('anchorBtn').setAttribute('aria-pressed', String(on));
+  setStatus(on ? 'Toque no ponto do modelo que será a âncora, como o canto de um pilar' : '');
+}
+$('anchorBtn').onclick = () => setPicking(!pickingAnchor);
+$('anchorReset').onclick = () => { if (model) { setAnchor(defaultAnchor, false); setStatus('Âncora de volta ao centro da base do modelo'); } };
 
 renderer.domElement.addEventListener('pointerdown', (e) => (downPos = [e.clientX, e.clientY]));
 renderer.domElement.addEventListener('pointerup', (e) => {
@@ -238,12 +407,11 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   const hit = raycaster.intersectObjects(pickable, false)[0];
 
   if (pickingAnchor) {
-    if (!hit) { setStatus('Nenhum elemento nesse ponto — tente de novo'); return; }
+    if (!hit) { setStatus('Nenhum elemento nesse ponto. Toque sobre o modelo.'); return; }
     const local = model.worldToLocal(hit.point.clone()); // coordenadas no sistema do modelo
-    setAnchor(local);
-    pickingAnchor = false;
-    $('anchorBtn').classList.remove('primary');
-    setStatus(`Âncora definida em X ${local.x.toFixed(2)} · Y ${local.z.toFixed(2)} · Z ${local.y.toFixed(2)} m (relativo à origem do modelo)`);
+    setAnchor(local, true);
+    setPicking(false);
+    setStatus(`Âncora definida em X ${num(local.x, 2)}, Y ${num(-local.z, 2)}, Z ${num(local.y, 2)} m`);
     return;
   }
 
@@ -259,7 +427,7 @@ const elementRanges = new Map(); // expressID → [{mesh, start, count}]
 const storeyOf = new Map();      // expressID → nome do pavimento
 let highlight = [];
 let selectedId = null;
-const hlMat = new THREE.MeshBasicMaterial({ color: 0x3d8bfd, transparent: true, opacity: 0.55,
+const hlMat = new THREE.MeshBasicMaterial({ color: 0xffc61a, transparent: true, opacity: 0.6,
   depthTest: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, side: THREE.DoubleSide });
 
 function elementAtFace(mesh, faceIndex) {
@@ -302,7 +470,7 @@ const val = (x) => (x && typeof x === 'object' && 'value' in x ? x.value : x);
 function fmt(v) {
   if (v === 'T' || v === true) return 'Sim';
   if (v === 'F' || v === false) return 'Não';
-  if (typeof v === 'number') return Number.isInteger(v) ? String(v) : v.toFixed(3).replace(/\.?0+$/, '');
+  if (typeof v === 'number') return num(v, 3);
   return v ?? '';
 }
 function propValue(p) {
@@ -315,19 +483,21 @@ function propValue(p) {
 }
 const kv = (k, v) => (v === '' || v == null ? '' : `<div class="kv"><span>${esc(k)}</span><span>${esc(v)}</span></div>`);
 
+function openPanel(id) {
+  if (innerWidth < 860) for (const p of ['catPanel', 'propPanel']) if (p !== id) $(p).classList.remove('open');
+  $(id).classList.add('open');
+}
+
 async function showProperties(id) {
-  const panel = $('propPanel');
-  if (innerWidth <= 700) $('catPanel').classList.remove('open');
-  panel.classList.add('open');
+  openPanel('propPanel');
   const typeName = ifcApi.GetNameFromTypeCode(ifcApi.GetLineType(modelID, id));
   let line = {};
   try { line = ifcApi.GetLine(modelID, id, false) || {}; } catch {}
   $('propTitle').textContent = val(line.Name) || friendlyType(typeName);
+  $('propSub').textContent = [friendlyType(typeName), storeyOf.get(id)].filter(Boolean).join(', ');
   let html = '<div class="pset"><h4>Identificação</h4>' +
-    kv('Categoria', `${friendlyType(typeName)} (${typeName})`) +
-    kv('Nome', val(line.Name)) + kv('Tipo', val(line.ObjectType)) + kv('Descrição', val(line.Description)) +
-    kv('Tag', val(line.Tag)) + kv('Pavimento', storeyOf.get(id)) + kv('GlobalId', val(line.GlobalId)) +
-    kv('ID (express)', id) + '</div>';
+    kv('Categoria IFC', typeName) + kv('Tipo', val(line.ObjectType)) + kv('Descrição', val(line.Description)) +
+    kv('Pavimento', storeyOf.get(id)) + kv('Tag', val(line.Tag)) + kv('GlobalId', val(line.GlobalId)) + '</div>';
   $('propBody').innerHTML = html + '<p class="muted">Carregando propriedades…</p>';
   try {
     const psets = await ifcApi.properties.getPropertySets(modelID, id, true);
@@ -337,7 +507,7 @@ async function showProperties(id) {
       const rows = props.map((p) => kv(val(p.Name), propValue(p))).join('');
       if (rows) html += `<div class="pset"><h4>${esc(val(ps.Name) || 'Propriedades')}</h4>${rows}</div>`;
     }
-    $('propBody').innerHTML = psets.length ? html : html + '<p class="muted">Sem conjuntos de propriedades.</p>';
+    $('propBody').innerHTML = psets.length ? html : html + '<p class="muted">Este elemento não tem conjuntos de propriedades no IFC.</p>';
   } catch (e) {
     $('propBody').innerHTML = html + `<p class="muted">Não foi possível ler as propriedades: ${esc(e.message)}</p>`;
   }
@@ -365,11 +535,11 @@ const TYPE_PT = {
   IFCFURNISHINGELEMENT: 'Mobiliário', IFCFURNITURE: 'Mobiliário', IFCFOOTING: 'Fundações', IFCPILE: 'Estacas',
   IFCMEMBER: 'Elementos estruturais', IFCPLATE: 'Placas', IFCCURTAINWALL: 'Fachada cortina', IFCSPACE: 'Ambientes',
   IFCBUILDINGELEMENTPROXY: 'Outros elementos', IFCSITE: 'Terreno', IFCOPENINGELEMENT: 'Aberturas',
-  IFCFLOWSEGMENT: 'Tubulações/dutos', IFCPIPESEGMENT: 'Tubulações', IFCDUCTSEGMENT: 'Dutos',
+  IFCFLOWSEGMENT: 'Tubulações e dutos', IFCPIPESEGMENT: 'Tubulações', IFCDUCTSEGMENT: 'Dutos',
   IFCFLOWFITTING: 'Conexões', IFCPIPEFITTING: 'Conexões de tubo', IFCDUCTFITTING: 'Conexões de duto',
   IFCFLOWTERMINAL: 'Terminais', IFCSANITARYTERMINAL: 'Louças sanitárias', IFCLIGHTFIXTURE: 'Luminárias',
   IFCCABLECARRIERSEGMENT: 'Eletrocalhas', IFCCABLESEGMENT: 'Cabos', IFCREINFORCINGBAR: 'Armaduras',
-  IFCREINFORCINGMESH: 'Telas de armadura', IFCFLOWCONTROLLER: 'Válvulas/controles', IFCVALVE: 'Válvulas',
+  IFCREINFORCINGMESH: 'Telas de armadura', IFCFLOWCONTROLLER: 'Válvulas e controles', IFCVALVE: 'Válvulas',
   IFCELECTRICAPPLIANCE: 'Equipamentos elétricos', IFCOUTLET: 'Tomadas', IFCSWITCHINGDEVICE: 'Interruptores',
   IFCAIRTERMINAL: 'Difusores de ar', IFCCHIMNEY: 'Chaminés', IFCSHADINGDEVICE: 'Brises', IFCGEOGRAPHICELEMENT: 'Elementos do terreno',
 };
@@ -386,8 +556,8 @@ function buildCategoryPanel() {
   const types = [...counts.keys()].sort((a, b) => friendlyType(a).localeCompare(friendlyType(b), 'pt'));
   $('catList').innerHTML = types.map((t) => `
     <label class="cat-row"><input type="checkbox" data-type="${t}" ${isHiddenDefault(t) ? '' : 'checked'} />
-      <span class="name">${esc(friendlyType(t))}<br/><small>${esc(t)}</small></span>
-      <small>${counts.get(t)}</small></label>`).join('');
+      <span class="name">${esc(friendlyType(t))}${friendlyType(t) !== t ? `<small>${esc(t)}</small>` : ''}</span>
+      <span class="n">${counts.get(t)}</span></label>`).join('');
   for (const t of types) setTypeVisible(t, !isHiddenDefault(t));
 }
 
@@ -403,30 +573,30 @@ $('catList').addEventListener('change', (e) => {
 $('catAll').onclick = () => $('catList').querySelectorAll('input').forEach((i) => { i.checked = true; setTypeVisible(i.dataset.type, true); });
 $('catNone').onclick = () => $('catList').querySelectorAll('input').forEach((i) => { i.checked = false; setTypeVisible(i.dataset.type, false); });
 $('catBtn').onclick = () => {
-  const p = $('catPanel');
-  p.classList.toggle('open');
-  if (p.classList.contains('open') && innerWidth <= 700) $('propPanel').classList.remove('open');
+  const open = !$('catPanel').classList.contains('open');
+  if (open) openPanel('catPanel'); else $('catPanel').classList.remove('open');
+  $('catBtn').setAttribute('aria-pressed', String(open));
 };
 document.querySelectorAll('[data-close]').forEach((b) => (b.onclick = () => {
   $(b.dataset.close).classList.remove('open');
   if (b.dataset.close === 'propPanel') clearSelection();
+  if (b.dataset.close === 'catPanel') $('catBtn').setAttribute('aria-pressed', 'false');
 }));
 
 /* ---------- Motor IFC ---------- */
 const ifcApi = new WEBIFC.IfcAPI();
 ifcApi.SetWasmPath('https://cdn.jsdelivr.net/npm/web-ifc@0.0.66/', true);
 let ifcReady = false;
-ifcApi.Init().then(() => { ifcReady = true; setStatus('Pronto. Abra um arquivo .ifc'); })
-  .catch((e) => setStatus('Erro ao iniciar o motor IFC: ' + e.message));
+ifcApi.Init().then(() => { ifcReady = true; setStatus(''); })
+  .catch((e) => setStatus('O leitor de IFC não carregou: ' + e.message + '. Abra o app com internet uma vez.'));
 
 async function loadIfc(file) {
-  if (!ifcReady) { setStatus('Aguarde o motor IFC carregar…'); return; }
+  if (!ifcReady) { setStatus('Aguarde, o leitor de IFC ainda está carregando…'); return; }
   setStatus(`Lendo ${file.name}…`);
   $('drop').style.display = 'none';
   await new Promise((r) => setTimeout(r, 30));
 
   const data = new Uint8Array(await file.arrayBuffer());
-  const t0 = performance.now();
   if (model) clearSelection();
   if (modelID >= 0) { try { ifcApi.CloseModel(modelID); } catch {} }
   elementRanges.clear();
@@ -510,14 +680,13 @@ async function loadIfc(file) {
   box.getSize(modelSize);
   defaultAnchor.set(center.x, box.min.y, center.z);
   pivot.add(model);
-  setAnchor(defaultAnchor);
+  setAnchor(defaultAnchor, false);
   pivot.add(anchorMarker);
 
   // Enquadra a câmera
   const r = Math.max(modelSize.x, modelSize.y, modelSize.z);
   anchorMarker.scale.setScalar(Math.max(0.05, r * 0.012));
   $('anchorBtn').disabled = false;
-  $('anchorReset').disabled = false;
   controls.target.set(0, modelSize.y / 2, 0);
   camera.position.set(r * 1.1, r * 0.8, r * 1.1);
   camera.far = r * 20; camera.updateProjectionMatrix();
@@ -528,14 +697,16 @@ async function loadIfc(file) {
   $('catBtn').disabled = false;
   buildCategoryPanel();
   buildStoreyMap();
-  const secs = ((performance.now() - t0) / 1000).toFixed(1);
-  setStatus(`${file.name} — ${count} elementos · ${modelSize.x.toFixed(1)} × ${modelSize.z.toFixed(1)} × ${modelSize.y.toFixed(1)} m · ${secs}s · toque num elemento para ver as propriedades`);
+  $('fileInfo').innerHTML = `<span id="fileName">${esc(file.name.replace(/\.ifc$/i, ''))}</span>` +
+    `<span id="fileMeta">${count} elementos, ${num(modelSize.x)} × ${num(modelSize.z)} × ${num(modelSize.y)} m</span>`;
+  setStatus(arSupported || isIOS ? 'Toque num elemento para ver as propriedades'
+    : 'Toque num elemento para ver as propriedades. Este navegador não abre o AR.');
 }
 
 /* ---------- Abrir arquivo ---------- */
 const fileInput = $('file');
 $('openBtn').onclick = $('openBtn2').onclick = () => fileInput.click();
-fileInput.onchange = () => fileInput.files[0] && loadIfc(fileInput.files[0]);
+fileInput.onchange = () => { if (fileInput.files[0]) loadIfc(fileInput.files[0]); fileInput.value = ''; };
 const drop = $('drop');
 addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('hover'); });
 addEventListener('dragleave', () => drop.classList.remove('hover'));
@@ -545,6 +716,11 @@ addEventListener('drop', (e) => {
   if (f) loadIfc(f);
 });
 
+/* ---------- Escala ---------- */
+const scaleSel = $('scaleSel');
+const updateScaleLabel = () => ($('scaleLabel').textContent = scaleSel.options[scaleSel.selectedIndex].text.split(',')[0]);
+updateScaleLabel();
+
 /* ---------- Realidade Aumentada (WebXR – Android/Chrome) ---------- */
 let arSupported = false;
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -552,14 +728,15 @@ const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
 if (navigator.xr?.isSessionSupported) {
   navigator.xr.isSessionSupported('immersive-ar').then((ok) => {
     arSupported = ok;
-    if (!ok) $('arBtn').title = 'Seu navegador não suporta WebXR AR';
+    if (!ok) $('arBtn').title = 'Este navegador não abre o AR';
+    if (model) $('arBtn').disabled = !ok;
   });
 }
-if (isIOS) { $('iosBtn').style.display = ''; $('arBtn').style.display = 'none'; }
+if (isIOS) { $('iosBtn').style.display = 'flex'; $('arBtn').style.display = 'none'; }
 
 const reticle = new THREE.Mesh(
   new THREE.RingGeometry(0.08, 0.11, 32).rotateX(-Math.PI / 2),
-  new THREE.MeshBasicMaterial({ color: 0x3d8bfd })
+  new THREE.MeshBasicMaterial({ color: 0xffc61a })
 );
 reticle.matrixAutoUpdate = false;
 reticle.visible = false;
@@ -567,7 +744,7 @@ scene.add(reticle);
 
 let hitTestSource = null, hitTestRequested = false, placed = false;
 let userScale = 1;
-const baseScale = () => parseFloat($('scaleSel').value);
+const baseScale = () => parseFloat(scaleSel.value);
 const applyScale = () => pivot.scale.setScalar(baseScale() * userScale);
 
 const overlay = $('arOverlay');
@@ -580,13 +757,12 @@ $('arBtn').onclick = async () => {
       optionalFeatures: ['hit-test', 'dom-overlay', 'local-floor'],
       domOverlay: { root: overlay },
     });
-  } catch (e) { setStatus('Não foi possível iniciar o AR: ' + e.message); return; }
+  } catch (e) { setStatus('Não foi possível abrir o AR: ' + e.message); return; }
   renderer.xr.setReferenceSpaceType('local');
   await renderer.xr.setSession(xrSession);
 };
 
 renderer.xr.addEventListener('sessionstart', () => {
-  scene.background = null;
   grid.visible = false;
   overlay.classList.add('on');
   placed = false; anchor.visible = false; userScale = 1; applyScale();
@@ -594,18 +770,17 @@ renderer.xr.addEventListener('sessionstart', () => {
   const session = renderer.xr.getSession();
   hasHitTest = !session.enabledFeatures || session.enabledFeatures.includes('hit-test');
   hasOverlay = !!session.domOverlayState;
-  setHint('Mova o celular devagar · toque na tela para fixar o modelo');
+  setHint('Mova o celular devagar e toque na tela para fixar o modelo');
   session.addEventListener('select', onSelect);
 });
 renderer.xr.addEventListener('sessionend', () => {
-  scene.background = bgColor;
   grid.visible = true;
   overlay.classList.remove('on');
   hitTestSource = null; hitTestRequested = false; reticle.visible = false;
   anchor.position.set(0, 0, 0); anchor.visible = true;
   pivot.scale.setScalar(1); pivot.rotation.set(0, 0, 0);
   xrSession = null;
-  setStatus(hasOverlay ? 'AR encerrado' : 'AR encerrado · (seu celular não mostra botões dentro do AR: toque fixa/solta o modelo)');
+  setStatus(hasOverlay ? '' : 'Neste celular, dentro do AR, um toque fixa o modelo e outro toque solta');
 });
 
 let hasHitTest = true, hasOverlay = false;
@@ -639,7 +814,7 @@ function onSelect() {
   if (!placed) {
     updatePreview();
     placed = true; reticle.visible = false;
-    setHint(hasOverlay ? 'Modelo fixado · use os botões para ajustar' : 'Modelo fixado · toque de novo para soltar');
+    setHint(hasOverlay ? 'Modelo fixado. Use os botões para ajustar.' : 'Modelo fixado. Toque de novo para soltar.');
   } else if (!hasOverlay) {
     // Sem botões na tela: tocar de novo solta o modelo para reposicionar
     placed = false;
@@ -650,19 +825,19 @@ function onSelect() {
 overlay.addEventListener('beforexrselect', (e) => e.preventDefault());
 $('arExit').onclick = () => xrSession?.end();
 $('arControls').onclick = (e) => {
-  const act = e.target.dataset.act;
+  const act = e.target.closest('button')?.dataset.act;
   if (act === 'rotL') pivot.rotation.y += Math.PI / 12;
   if (act === 'rotR') pivot.rotation.y -= Math.PI / 12;
   if (act === 'bigger') { userScale *= 1.25; applyScale(); }
   if (act === 'smaller') { userScale /= 1.25; applyScale(); }
-  if (act === 'move') { placed = false; setHint('Mova o celular · toque na tela para fixar de novo'); }
+  if (act === 'move') { placed = false; setHint('Mova o celular e toque na tela para fixar de novo'); }
 };
-$('scaleSel').onchange = () => { if (renderer.xr.isPresenting) { userScale = 1; applyScale(); } };
+scaleSel.onchange = () => { updateScaleLabel(); if (renderer.xr.isPresenting) { userScale = 1; applyScale(); } };
 
 /* ---------- AR no iPhone/iPad (AR Quick Look via USDZ) ---------- */
 $('iosBtn').onclick = async () => {
   if (!model) return;
-  setStatus('Gerando USDZ para AR Quick Look…');
+  setStatus('Preparando o modelo para o AR…');
   const exportRoot = new THREE.Group();
   const clone = model.clone();
   clone.children.filter((c) => !c.visible || c.userData.isHighlight).forEach((c) => clone.remove(c));
@@ -683,8 +858,8 @@ $('iosBtn').onclick = async () => {
     document.body.appendChild(a);
     a.click();
     setTimeout(() => a.remove(), 1000);
-    setStatus('Abrindo AR Quick Look…');
-  } catch (e) { setStatus('Falha ao gerar USDZ: ' + e.message); }
+    setStatus('');
+  } catch (e) { setStatus('Não foi possível preparar o AR: ' + e.message); }
 };
 
 /* ---------- Loop de renderização ---------- */
@@ -725,30 +900,42 @@ addEventListener('resize', () => {
 </script>
 
 <script>
-// Modo offline (PWA): guarda a página e as bibliotecas no aparelho na primeira visita.
+// Modo offline (PWA) e instalação na tela inicial.
 (function () {
   var badge = document.getElementById('offline');
   if ('serviceWorker' in navigator) {
-    badge.style.display = '';
-    badge.textContent = '⏳ Preparando modo offline…';
+    badge.style.display = 'flex';
+    badge.textContent = 'Preparando offline';
     navigator.serviceWorker.register('sw.js').then(function () {
       return navigator.serviceWorker.ready;
     }).then(function () {
-      badge.textContent = '✓ Funciona offline';
+      badge.textContent = 'Pronto para offline';
       badge.className = 'ok';
     }).catch(function () {
-      badge.textContent = '⚠ Modo offline indisponível';
+      badge.textContent = 'Sem modo offline';
     });
   }
-  // Android/Chrome: botão para instalar o app na tela inicial
-  var deferred = null, installBtn = document.getElementById('installBtn');
+
+  var installBtn = document.getElementById('installBtn');
+  var sheet = document.getElementById('installSheet');
+  var standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var deferred = null;
+
+  // iPhone: a Apple não deixa a página pedir a instalação, então mostramos o passo a passo.
+  if (isIOS && !standalone) installBtn.style.display = 'flex';
+
+  // Android/Chrome: usa o pedido de instalação do próprio navegador.
   window.addEventListener('beforeinstallprompt', function (e) {
-    e.preventDefault(); deferred = e; installBtn.style.display = '';
+    e.preventDefault(); deferred = e; installBtn.style.display = 'flex';
   });
   installBtn.onclick = function () {
-    if (!deferred) return;
-    deferred.prompt();
-    deferred.userChoice.finally(function () { deferred = null; installBtn.style.display = 'none'; });
+    if (deferred) {
+      deferred.prompt();
+      deferred.userChoice.finally(function () { deferred = null; installBtn.style.display = 'none'; });
+    } else if (isIOS) {
+      sheet.classList.add('open');
+    }
   };
   window.addEventListener('appinstalled', function () { installBtn.style.display = 'none'; });
 })();
