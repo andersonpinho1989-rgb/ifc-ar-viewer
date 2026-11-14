@@ -329,8 +329,7 @@ $('arBtn').onclick = async () => {
   if (!model) return;
   try {
     xrSession = await navigator.xr.requestSession('immersive-ar', {
-      requiredFeatures: ['hit-test'],
-      optionalFeatures: ['dom-overlay', 'local-floor'],
+      optionalFeatures: ['hit-test', 'dom-overlay', 'local-floor'],
       domOverlay: { root: overlay },
     });
   } catch (e) { setStatus('Não foi possível iniciar o AR: ' + e.message); return; }
@@ -344,8 +343,11 @@ renderer.xr.addEventListener('sessionstart', () => {
   overlay.classList.add('on');
   placed = false; anchor.visible = false; userScale = 1; applyScale();
   pivot.rotation.set(0, 0, 0);
-  $('arHint').textContent = 'Aponte para o chão e toque para posicionar';
   const session = renderer.xr.getSession();
+  hasHitTest = !session.enabledFeatures || session.enabledFeatures.includes('hit-test');
+  $('arHint').textContent = hasHitTest
+    ? 'Aponte para o chão e toque para posicionar'
+    : 'Toque na tela para colocar o modelo à sua frente';
   session.addEventListener('select', onSelect);
 });
 renderer.xr.addEventListener('sessionend', () => {
@@ -358,9 +360,21 @@ renderer.xr.addEventListener('sessionend', () => {
   xrSession = null;
 });
 
+let hasHitTest = true;
+const _camPos = new THREE.Vector3(), _camDir = new THREE.Vector3();
 function onSelect() {
-  if (!reticle.visible || placed) return;
-  anchor.position.setFromMatrixPosition(reticle.matrix);
+  if (placed) return;
+  if (reticle.visible) {
+    anchor.position.setFromMatrixPosition(reticle.matrix);
+  } else if (!hitTestSource) {
+    // Sem detecção de chão: coloca 1,5 m à frente e ~1,3 m abaixo da câmera
+    const cam = renderer.xr.getCamera();
+    cam.getWorldPosition(_camPos);
+    cam.getWorldDirection(_camDir);
+    _camDir.y = 0; _camDir.normalize();
+    anchor.position.copy(_camPos).addScaledVector(_camDir, 1.5);
+    anchor.position.y = _camPos.y - 1.3;
+  } else return;
   anchor.visible = true; placed = true; reticle.visible = false;
   $('arHint').textContent = 'Modelo posicionado · use os botões para ajustar';
 }
@@ -411,9 +425,13 @@ renderer.setAnimationLoop((time, frame) => {
     const session = renderer.xr.getSession();
     const refSpace = renderer.xr.getReferenceSpace();
     if (!hitTestRequested) {
-      session.requestReferenceSpace('viewer').then((viewerSpace) =>
-        session.requestHitTestSource({ space: viewerSpace }).then((src) => (hitTestSource = src)));
       hitTestRequested = true;
+      if (hasHitTest && session.requestHitTestSource) {
+        session.requestReferenceSpace('viewer')
+          .then((viewerSpace) => session.requestHitTestSource({ space: viewerSpace }))
+          .then((src) => (hitTestSource = src))
+          .catch(() => { hasHitTest = false; $('arHint').textContent = 'Toque na tela para colocar o modelo à sua frente'; });
+      }
     }
     if (hitTestSource && !placed) {
       const hits = frame.getHitTestResults(hitTestSource);
