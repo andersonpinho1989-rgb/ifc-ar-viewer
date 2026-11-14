@@ -318,7 +318,7 @@ async function showProperties(id) {
     kv('ID (express)', id) + '</div>';
   $('propBody').innerHTML = html + '<p class="muted">Carregando propriedades…</p>';
   try {
-    const psets = await ifcApi.properties.getPropertySets(modelID, id, true, true);
+    const psets = await ifcApi.properties.getPropertySets(modelID, id, true);
     if (selectedId !== id) return;
     for (const ps of psets) {
       const props = ps.HasProperties || ps.Quantities || [];
@@ -336,7 +336,7 @@ async function buildStoreyMap() {
   try {
     const root = await ifcApi.properties.getSpatialStructure(modelID);
     const walk = (node, storey) => {
-      if (node.type === 'IFCBUILDINGSTOREY') {
+      if (String(node.type).toUpperCase() === 'IFCBUILDINGSTOREY') {
         try { storey = val(ifcApi.GetLine(modelID, node.expressID).Name) || storey; } catch {}
       }
       for (const c of node.children || []) { if (storey) storeyOf.set(c.expressID, storey); walk(c, storey); }
@@ -361,8 +361,9 @@ const TYPE_PT = {
   IFCELECTRICAPPLIANCE: 'Equipamentos elétricos', IFCOUTLET: 'Tomadas', IFCSWITCHINGDEVICE: 'Interruptores',
   IFCAIRTERMINAL: 'Difusores de ar', IFCCHIMNEY: 'Chaminés', IFCSHADINGDEVICE: 'Brises', IFCGEOGRAPHICELEMENT: 'Elementos do terreno',
 };
-const friendlyType = (t) => TYPE_PT[t] || t.replace(/^IFC/, 'Ifc');
+const friendlyType = (t) => TYPE_PT[String(t).toUpperCase()] || t;
 const HIDDEN_BY_DEFAULT = new Set(['IFCSPACE', 'IFCOPENINGELEMENT']);
+const isHiddenDefault = (t) => HIDDEN_BY_DEFAULT.has(String(t).toUpperCase());
 
 function buildCategoryPanel() {
   const counts = new Map();
@@ -372,10 +373,10 @@ function buildCategoryPanel() {
   }
   const types = [...counts.keys()].sort((a, b) => friendlyType(a).localeCompare(friendlyType(b), 'pt'));
   $('catList').innerHTML = types.map((t) => `
-    <label class="cat-row"><input type="checkbox" data-type="${t}" ${HIDDEN_BY_DEFAULT.has(t) ? '' : 'checked'} />
+    <label class="cat-row"><input type="checkbox" data-type="${t}" ${isHiddenDefault(t) ? '' : 'checked'} />
       <span class="name">${esc(friendlyType(t))}<br/><small>${esc(t)}</small></span>
       <small>${counts.get(t)}</small></label>`).join('');
-  for (const t of types) setTypeVisible(t, !HIDDEN_BY_DEFAULT.has(t));
+  for (const t of types) setTypeVisible(t, !isHiddenDefault(t));
 }
 
 function setTypeVisible(type, on) {
