@@ -67,6 +67,7 @@
   #offline { display: none; align-items: center; gap: 6px; font-size: 13px; color: #AEB5BC; white-space: nowrap; }
   #offline::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #8A929B; }
   #offline.ok::before { background: var(--ok); }
+  @media (max-width: 560px) { #offline { font-size: 0; gap: 0; } }
   #installBtn { display: none; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; cursor: pointer;
     background: rgba(230,231,227,.12); border: 1px solid rgba(230,231,227,.25); font-size: 14px; font-weight: 600; }
   #installBtn svg { width: 18px; height: 18px; }
@@ -234,7 +235,7 @@
   </div>
   <div id="fileInfo"></div>
   <div class="spacer"></div>
-  <span id="offline" role="status"></span>
+  <span id="offline" role="status" title="Modo offline"></span>
   <button id="installBtn" type="button"><svg class="i"><use href="#i-baixar"/></svg>Instalar</button>
 </header>
 
@@ -688,8 +689,9 @@ async function loadIfc(file) {
   anchorMarker.scale.setScalar(Math.max(0.05, r * 0.012));
   $('anchorBtn').disabled = false;
   controls.target.set(0, modelSize.y / 2, 0);
-  camera.position.set(r * 1.1, r * 0.8, r * 1.1);
-  camera.far = r * 20; camera.updateProjectionMatrix();
+  const fit = Math.max(1, 0.9 / camera.aspect); // tela em pé: afasta a câmera para caber na largura
+  camera.position.set(r * 1.1 * fit, r * 0.8 * fit, r * 1.1 * fit);
+  camera.far = r * 40; camera.updateProjectionMatrix();
   grid.scale.setScalar(Math.max(1, r / 50));
 
   $('arBtn').disabled = !arSupported;
