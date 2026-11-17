@@ -179,7 +179,8 @@
   .cat-row input:checked, .el-row input:checked { background: var(--grafite); border-color: var(--grafite); }
   .cat-row input:checked::after, .el-row input:checked::after { content: ''; width: 5px; height: 10px; border: solid var(--sinal);
     border-width: 0 2.5px 2.5px 0; transform: translateY(-1px) rotate(45deg); }
-  .cat-row input:indeterminate::after { width: 10px; height: 0; border-width: 0 0 2.5px 0; transform: none; }
+  .cat-row input:indeterminate { background: var(--grafite); border-color: var(--grafite); }
+  .cat-row input:indeterminate::after { content: ''; width: 10px; height: 0; border: solid var(--sinal); border-width: 0 0 2.5px 0; transform: none; }
   .cat-row input:disabled, .el-row input:disabled { opacity: .35; cursor: default; }
   .cat-row .name { flex: 1; min-width: 0; font-weight: 600; text-align: left; background: none; border: 0; padding: 4px 0;
     color: inherit; cursor: pointer; font-size: 15px; }
@@ -503,6 +504,7 @@ function selectElement(id) {
   for (const { mesh, start, count } of elementRanges.get(id) || []) {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', mesh.geometry.attributes.position);
+    g.setAttribute('normal', mesh.geometry.attributes.normal);
     g.setIndex(new THREE.BufferAttribute(mesh.userData.fullIndex.slice(start, start + count), 1));
     const h = new THREE.Mesh(g, hlMat);
     h.userData.isHighlight = true;
