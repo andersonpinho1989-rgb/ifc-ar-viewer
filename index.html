@@ -88,6 +88,7 @@
   #retryBtn.on { display: flex; }
   @media (min-width: 860px) { #retryBtn { bottom: calc(165px + var(--safe-b)); } }
   #anchorReset .pino { width: 10px; height: 10px; border-radius: 50%; background: var(--marco); box-shadow: 0 0 0 3px rgba(232,73,44,.25); }
+  #anchorReset.dois .pino { box-shadow: 0 0 0 3px rgba(232,73,44,.25), 13px 0 0 0 #FF8C1A; margin-right: 13px; }
 
   /* Barra de ferramentas inferior */
   #dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--papel); color: var(--tinta);
@@ -286,7 +287,7 @@
 </div>
 
 <button id="anchorReset" type="button" title="Voltar a âncora para o centro da base do modelo">
-  <span class="pino"></span>Âncora personalizada<svg class="i" style="width:16px;height:16px"><use href="#i-x"/></svg>
+  <span class="pino"></span><span id="anchorLabel">Âncora personalizada</span><svg class="i" style="width:16px;height:16px"><use href="#i-x"/></svg>
 </button>
 
 <div id="status" role="status" aria-live="polite">Carregando o leitor de IFC…</div>
@@ -415,26 +416,55 @@ const anchorMarker = new THREE.Group();
   anchorMarker.renderOrder = 999;
   anchorMarker.traverse((o) => (o.renderOrder = 999));
 }
+// Segundo ponto do alinhamento (laranja), opcional
+let anchorB = null;
+const markerB = anchorMarker.clone();
+markerB.traverse((o) => { if (o.material) o.material = new THREE.MeshBasicMaterial({ color: 0xff8c1a, depthTest: false }); });
+markerB.visible = false;
 
+function updateAnchorChip() {
+  const custom = !anchorLocal.equals(defaultAnchor) || !!anchorB;
+  $('anchorReset').classList.toggle('on', custom);
+  $('anchorReset').classList.toggle('dois', !!anchorB);
+  $('anchorLabel').textContent = anchorB ? 'Âncora por 2 pontos' : 'Âncora personalizada';
+}
 function setAnchor(p, custom = false) {
+  // Desloca a câmera junto com o modelo, para nada pular na tela
+  const before = model.position.clone();
   anchorLocal.copy(p);
   model.position.set(-p.x, -p.y, -p.z);
-  controls.target.set(0, modelSize.y / 2, 0);
-  $('anchorReset').classList.toggle('on', custom);
+  const delta = model.position.clone().sub(before);
+  camera.position.add(delta); controls.target.add(delta);
+  grid.position.y = defaultAnchor.y - p.y; // grade sempre na base do modelo
+  if (!custom) anchorB = null;
+  markerB.visible = !!anchorB;
+  if (anchorB) markerB.position.copy(anchorB).sub(anchorLocal);
+  updateAnchorChip();
 }
+// Distância horizontal entre os dois pontos, em metros do modelo
+const pointsDistance = () => (anchorB ? Math.hypot(anchorB.x - anchorLocal.x, anchorB.z - anchorLocal.z) : 0);
 
 let pickingAnchor = false;
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 let downPos = null;
 
+let pickStep = 1;
 function setPicking(on) {
   pickingAnchor = on;
+  pickStep = 1;
   $('anchorBtn').setAttribute('aria-pressed', String(on));
-  setStatus(on ? 'Toque no ponto do modelo que será a âncora, como o canto de um pilar' : '');
+  setStatus(on ? 'Toque no ponto 1, no nível do piso, como a base de um pilar' : '');
 }
-$('anchorBtn').onclick = () => setPicking(!pickingAnchor);
-$('anchorReset').onclick = () => { if (model) { setAnchor(defaultAnchor, false); setStatus('Âncora de volta ao centro da base do modelo'); } };
+$('anchorBtn').onclick = () => {
+  if (pickingAnchor && pickStep === 2) {
+    setPicking(false);
+    setStatus('Âncora de 1 ponto definida. No AR, toque sobre esse ponto e gire o modelo à mão.');
+    return;
+  }
+  setPicking(!pickingAnchor);
+};
+$('anchorReset').onclick = () => { if (model) { anchorB = null; setAnchor(defaultAnchor, false); setStatus('Âncora de volta ao centro da base do modelo'); } };
 
 renderer.domElement.addEventListener('pointerdown', (e) => (downPos = [e.clientX, e.clientY]));
 renderer.domElement.addEventListener('pointerup', (e) => {
@@ -449,9 +479,22 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   if (pickingAnchor) {
     if (!hit) { setStatus('Nenhum elemento nesse ponto. Toque sobre o modelo.'); return; }
     const local = model.worldToLocal(hit.point.clone()); // coordenadas no sistema do modelo
-    setAnchor(local, true);
-    setPicking(false);
-    setStatus(`Âncora definida em X ${num(local.x, 2)}, Y ${num(-local.z, 2)}, Z ${num(local.y, 2)} m`);
+    if (pickStep === 1) {
+      anchorB = null;
+      setAnchor(local, true);
+      pickStep = 2;
+      setStatus('Ponto 1 definido. Toque no ponto 2, longe do primeiro, ou toque em Âncora para usar só um ponto.');
+    } else {
+      const d = Math.hypot(local.x - anchorLocal.x, local.z - anchorLocal.z);
+      if (d < 0.5) { setStatus('O ponto 2 está muito perto do ponto 1. Escolha um ponto mais afastado.'); return; }
+      anchorB = local;
+      setAnchor(anchorLocal, true);
+      pickingAnchor = false;
+      $('anchorBtn').setAttribute('aria-pressed', 'false');
+      setStatus(isIOS
+        ? `Pontos definidos, a ${num(d, 2)} m um do outro. No iPhone, o AR da Apple usa só o ponto 1.`
+        : `Pontos definidos, a ${num(d, 2)} m um do outro. No AR, toque sobre o ponto 1 real e depois sobre o ponto 2.`);
+    }
     return;
   }
 
@@ -858,12 +901,15 @@ async function loadIfc(file) {
   box.getSize(modelSize);
   defaultAnchor.set(center.x, box.min.y, center.z);
   pivot.add(model);
+  anchorB = null;
+  model.position.set(-defaultAnchor.x, -defaultAnchor.y, -defaultAnchor.z);
   setAnchor(defaultAnchor, false);
-  pivot.add(anchorMarker);
+  pivot.add(anchorMarker, markerB);
 
   // Enquadra a câmera
   const r = Math.max(modelSize.x, modelSize.y, modelSize.z);
-  anchorMarker.scale.setScalar(Math.max(0.05, r * 0.012));
+  anchorMarker.scale.setScalar(Math.max(0.05, r * 0.018));
+  markerB.scale.copy(anchorMarker.scale);
   $('anchorBtn').disabled = false;
   controls.target.set(0, modelSize.y / 2, 0);
   const fit = Math.max(1, 0.9 / camera.aspect); // tela em pé: afasta a câmera para caber na largura
@@ -1016,7 +1062,9 @@ renderer.xr.addEventListener('sessionstart', () => {
   const session = renderer.xr.getSession();
   hasHitTest = !session.enabledFeatures || session.enabledFeatures.includes('hit-test');
   hasOverlay = !!session.domOverlayState;
-  setHint('Mova o celular devagar e toque na tela para fixar o modelo');
+  alignStep = anchorB && hasHitTest ? 1 : 0;
+  setHint(alignStep ? 'Aponte o anel para o ponto 1 real, no chão, e toque na tela'
+    : 'Mova o celular devagar e toque na tela para fixar o modelo');
   session.addEventListener('select', onSelect);
 });
 renderer.xr.addEventListener('sessionend', () => {
@@ -1056,7 +1104,39 @@ function updatePreview() {
   anchor.visible = true;
 }
 
+// Alinhamento por dois pontos: 0 = desligado, 1 = esperando o ponto 1, 2 = esperando o ponto 2
+let alignStep = 0;
+const alignA = new THREE.Vector3(), _ret = new THREE.Vector3();
+function alignTowards(target) {
+  // Gira o modelo em torno do ponto 1 para que o ponto 2 aponte para o alvo
+  const dx = anchorB.x - anchorLocal.x, dz = anchorB.z - anchorLocal.z;
+  const wx = target.x - alignA.x, wz = target.z - alignA.z;
+  if (Math.hypot(wx, wz) < 0.05) return;
+  pivot.rotation.y = Math.atan2(wx, wz) - Math.atan2(dx, dz);
+}
 function onSelect() {
+  if (!placed && alignStep === 1) {
+    if (!reticle.visible) { setHint('Aponte para o chão até aparecer o anel'); return; }
+    alignA.setFromMatrixPosition(reticle.matrix);
+    anchor.position.copy(alignA);
+    alignStep = 2;
+    setHint('Ponto 1 marcado. Aponte o anel para o ponto 2 real e toque');
+    return;
+  }
+  if (!placed && alignStep === 2) {
+    if (!reticle.visible) { setHint('Aponte para o chão até aparecer o anel'); return; }
+    _ret.setFromMatrixPosition(reticle.matrix);
+    alignTowards(_ret);
+    placed = true; reticle.visible = false; alignStep = 0;
+    const real = Math.hypot(_ret.x - alignA.x, _ret.z - alignA.z);
+    const proj = pointsDistance() * baseScale() * userScale;
+    const diff = Math.abs(real - proj);
+    const fmtM = (v) => (v < 1 ? num(v * 100, 0) + ' cm' : num(v, 2) + ' m');
+    setHint(diff <= Math.max(0.05, proj * 0.03)
+      ? `Alinhado. Distância medida ${fmtM(real)}, no projeto ${fmtM(proj)}.`
+      : `Alinhado, mas confira os pontos: medida ${fmtM(real)}, projeto ${fmtM(proj)}.`);
+    return;
+  }
   if (!placed) {
     updatePreview();
     placed = true; reticle.visible = false;
@@ -1064,6 +1144,7 @@ function onSelect() {
   } else if (!hasOverlay) {
     // Sem botões na tela: tocar de novo solta o modelo para reposicionar
     placed = false;
+    if (anchorB && hasHitTest) { alignStep = 1; pivot.rotation.y = 0; }
   }
 }
 
@@ -1076,7 +1157,11 @@ $('arControls').onclick = (e) => {
   if (act === 'rotR') pivot.rotation.y -= Math.PI / 12;
   if (act === 'bigger') { userScale *= 1.25; applyScale(); }
   if (act === 'smaller') { userScale /= 1.25; applyScale(); }
-  if (act === 'move') { placed = false; setHint('Mova o celular e toque na tela para fixar de novo'); }
+  if (act === 'move') {
+    placed = false;
+    if (anchorB && hasHitTest) { alignStep = 1; pivot.rotation.y = 0; setHint('Aponte o anel para o ponto 1 real e toque'); }
+    else setHint('Mova o celular e toque na tela para fixar de novo');
+  }
 };
 scaleSel.onchange = () => { updateScaleLabel(); if (renderer.xr.isPresenting) { userScale = 1; applyScale(); } };
 
@@ -1130,7 +1215,10 @@ renderer.setAnimationLoop((time, frame) => {
           reticle.matrix.fromArray(hits[0].getPose(refSpace).transform.matrix);
         } else reticle.visible = false;
       }
-      updatePreview();
+      if (alignStep === 2) {
+        anchor.position.copy(alignA); anchor.visible = true;
+        if (reticle.visible) alignTowards(_ret.setFromMatrixPosition(reticle.matrix));
+      } else updatePreview();
     }
   } else {
     stepFocus();
